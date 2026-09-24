@@ -1,10 +1,10 @@
-# Project OS · Documentation governance for AI-assisted projects
+# Awoo Vibe Coding Governance
 
 English · [简体中文](README.md)
 
 Keep the same project moving correctly when you switch conversations, models, or execution tools.
 
-Project OS is a lightweight governance kit that integrates into **existing projects**. It helps an AI find effective requirements, current facts, unfinished work, and acceptance evidence. It includes additive installation and local checking tools. You can give this repository link directly to the AI already working on your project.
+Awoo Vibe Coding Governance is a lightweight governance kit that integrates into **existing projects**. It helps an AI find effective requirements, current facts, unfinished work, and acceptance evidence. It includes additive installation and local checking tools. You can give this repository link directly to the AI already working on your project.
 
 It is intended for ongoing development with tools such as Codex and Claude Code. For a one-off task, borrowing a few principles may be enough. It does not build your application automatically or require a specific model, technology stack, or multiple agents.
 
@@ -14,7 +14,7 @@ Send this prompt to the AI in your existing project:
 
 ```text
 Integrate the documentation governance from
-https://github.com/furenzhong/ai_codex_project_os_starter_kit
+https://github.com/furenzhong/awoo-vibe-coding-governance
 into the project I am currently developing.
 
 Follow the kit's integration guide. Identify the source kit and the target
@@ -63,14 +63,16 @@ your-project/
 
 Task and evidence directories are used when work calls for them. Heavier PRD, API, and risk templates remain optional resources in the kit; **they are not copied into every project**. The AI must populate the initial documents from your actual project. File existence alone does not constitute successful integration.
 
+For compatibility with existing installations, `project-os.json`, `project-os/`, and `scripts/project_os.py` retain their names. The brand change does not require migrating project files.
+
 ## Manual commands
 
 Requires Python 3.10+ and Git, with no model API key or third-party Python packages. The same Python entry works in Windows PowerShell, macOS, and Linux. Run these commands from the **target project's root**, with the source kit beside it:
 
 ```text
-git clone https://github.com/furenzhong/ai_codex_project_os_starter_kit.git ../project-os-kit
-python ../project-os-kit/scripts/project_os.py plan --target .
-python ../project-os-kit/scripts/project_os.py apply --target .
+git clone https://github.com/furenzhong/awoo-vibe-coding-governance.git ../awoo-governance-kit
+python ../awoo-governance-kit/scripts/project_os.py plan --target .
+python ../awoo-governance-kit/scripts/project_os.py apply --target .
 python scripts/project_os.py check --target .
 python scripts/project_os.py snapshot --target . --json
 ```
@@ -96,7 +98,7 @@ Your decision: none, or one specific question
 
 At first adoption and after substantial changes to reading or collaboration behavior, follow the [governance trial](docs/03_DELIVERY/GOVERNANCE_TRIAL.md) in an isolated copy: fresh-session recovery, stale statements, missing acceptance evidence, and interrupted work. Day-to-day work checks only relevant changes. It does not rerun the entire trial on every edit or automatically create monitoring or paid calls.
 
-**A machine pass establishes only the checked structural and declaration rules.** It does not establish product quality, the truth of every document, or actual agent adherence. Mark exercises that were not run as untested. Report evidence and a minimal correction when something fails. See the [validation record](docs/05_HANDOFF/evidence/2026-09-25-v1.1-validation.md) for the current version's measured coverage.
+**A machine pass establishes only the checked structural and declaration rules.** It does not establish product quality, the truth of every document, or actual agent adherence. Mark exercises that were not run as untested. Report evidence and a minimal correction when something fails. See the [current status](docs/00_PROJECT_CONTROL/PROJECT_CURRENT_STATUS.md) for measured coverage and the corresponding versioned evidence.
 
 ## Collaboration such as Codex → Claude Code
 

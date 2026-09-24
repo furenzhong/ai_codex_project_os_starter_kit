@@ -1,4 +1,4 @@
-# Project OS 产品约定
+# Awoo Vibe Coding Governance 产品约定
 
 ## 用户和目标
 

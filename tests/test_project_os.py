@@ -48,7 +48,7 @@ class ProjectOSRegressionTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.source = self.root / "kit"
         self.target = self.root / "project"
-        for path, origin in ((self.source, "https://github.com/furenzhong/ai_codex_project_os_starter_kit.git"), (self.target, "https://example.invalid/team/product.git")):
+        for path, origin in ((self.source, "https://github.com/furenzhong/awoo-vibe-coding-governance.git"), (self.target, "https://example.invalid/team/product.git")):
             path.mkdir()
             run_git(path, "init", "-q")
             run_git(path, "remote", "add", "origin", origin)
@@ -233,13 +233,48 @@ class ProjectOSRegressionTests(unittest.TestCase):
             project_os.build_plan(self.source, project_os.target_root(str(alias)), None)
 
     def test_clone_origin_is_rejected_across_https_and_ssh(self):
-        for origin in ("git@github.com:furenzhong/ai_codex_project_os_starter_kit.git", "ssh://git@github.com/furenzhong/ai_codex_project_os_starter_kit.git", "https://user:secret@github.com/furenzhong/ai_codex_project_os_starter_kit.git?token=secret"):
+        origins = [
+            template.format(name=name)
+            for name in ("awoo-vibe-coding-governance", "ai_codex_project_os_starter_kit")
+            for template in (
+                "git@github.com:furenzhong/{name}.git",
+                "ssh://git@github.com/furenzhong/{name}.git",
+                "https://user:secret@github.com/furenzhong/{name}.git?token=secret",
+            )
+        ]
+        for origin in origins:
             with self.subTest(origin=origin):
                 run_git(self.target, "remote", "set-url", "origin", origin)
                 with self.assertRaisesRegex(project_os.ProjectOSError, "origin identifies") as error:
                     self.install()
                 self.assertNotIn("secret", str(error.exception))
                 self.assertFalse((self.target / "project-os.json").exists())
+
+    def test_canonical_clones_are_rejected_when_source_is_a_fork(self):
+        run_git(self.source, "remote", "set-url", "origin", "https://example.invalid/team/kit-fork.git")
+        before = file_bytes(self.target)
+        for name in ("awoo-vibe-coding-governance", "ai_codex_project_os_starter_kit"):
+            with self.subTest(name=name):
+                run_git(self.target, "remote", "set-url", "origin", f"https://github.com/furenzhong/{name}.git")
+                with self.assertRaisesRegex(project_os.ProjectOSError, "origin identifies"):
+                    self.install()
+                self.assertEqual(before, file_bytes(self.target))
+
+    def test_checker_detects_renamed_kit_with_legacy_provenance(self):
+        legacy = "github.com/furenzhong/ai_codex_project_os_starter_kit"
+        run_git(self.source, "remote", "set-url", "origin", f"https://{legacy}.git")
+        self.install()
+        manifest = self.target / "project-os.json"
+        before = manifest.read_bytes()
+        self.assertEqual(project_os.read_json(manifest)["source_identity"]["origin"], legacy)
+        self.assertTrue(self.check()["ok"])
+        for name in ("awoo-vibe-coding-governance", "ai_codex_project_os_starter_kit"):
+            with self.subTest(name=name):
+                run_git(self.target, "remote", "set-url", "origin", f"git@github.com:furenzhong/{name}.git")
+                report = self.check()
+                self.assertFalse(report["ok"])
+                self.assertTrue(any(error["code"] == "identity" for error in report["errors"]))
+                self.assertEqual(before, manifest.read_bytes())
 
     def test_shared_git_worktree_is_rejected(self):
         worktree = self.root / "kit-worktree"
@@ -259,7 +294,7 @@ class ProjectOSRegressionTests(unittest.TestCase):
             project_os.target_root(str(nested))
 
     def test_install_manifest_redacts_source_credentials_and_has_provenance(self):
-        run_git(self.source, "remote", "set-url", "origin", "https://user:secret@github.com/furenzhong/ai_codex_project_os_starter_kit.git?token=hidden")
+        run_git(self.source, "remote", "set-url", "origin", "https://user:secret@github.com/furenzhong/awoo-vibe-coding-governance.git?token=hidden")
         self.install()
         manifest = project_os.read_json(self.target / "project-os.json")
         source = manifest["source_identity"]

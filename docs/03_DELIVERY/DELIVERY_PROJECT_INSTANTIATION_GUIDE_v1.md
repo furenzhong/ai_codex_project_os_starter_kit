@@ -19,8 +19,8 @@
 只读预览与执行（从目标根目录运行）：
 
 ```text
-python ../project-os-kit/scripts/project_os.py plan --target .
-python ../project-os-kit/scripts/project_os.py apply --target .
+python ../awoo-governance-kit/scripts/project_os.py plan --target .
+python ../awoo-governance-kit/scripts/project_os.py apply --target .
 ```
 
 plan 有冲突时先处理具体原因。apply 保留已有文件原文，只创建缺失文件并追加一次受管入口；重复执行不会刷新用户状态。不要用删除旧文件、重建 Git 或覆盖整个目录来消除冲突。
@@ -45,8 +45,8 @@ plan 有冲突时先处理具体原因。apply 保留已有文件原文，只创
 将该映射存为目标中的 `work/adoption.json` 后，用相同映射运行 plan 和 apply：
 
 ```text
-python ../project-os-kit/scripts/project_os.py plan --target . --mapping work/adoption.json
-python ../project-os-kit/scripts/project_os.py apply --target . --mapping work/adoption.json
+python ../awoo-governance-kit/scripts/project_os.py plan --target . --mapping work/adoption.json
+python ../awoo-governance-kit/scripts/project_os.py apply --target . --mapping work/adoption.json
 ```
 
 映射文件参数相对执行命令的当前目录，文件中的路径字段相对目标根目录。路径不能越界、指向 .git 或借符号链接写到外面。示例文件是路径形状示例，必须先根据目标核对。若已有相同职责却使用不同术语，由 AI 在现有文档中最小补充职责说明，不建立第二份事实。

@@ -1,10 +1,10 @@
-# Project OS · AI 项目文档治理
+# Awoo Vibe Coding Governance
 
 [English](README.en.md) · 简体中文
 
 让 AI 换会话、换模型、换执行工具之后，仍能接着把同一个项目做对。
 
-Project OS 是一个可接入**已有项目**的轻量治理工具包。它帮助 AI 找到有效要求、当前事实、未完成现场和验收依据，并提供增量接入与检查脚本。你可以直接把这个仓库链接发给正在开发项目的 AI。
+Awoo Vibe Coding Governance 是一个可接入**已有项目**的轻量治理工具包。它帮助 AI 找到有效要求、当前事实、未完成现场和验收依据，并提供增量接入与检查脚本。你可以直接把这个仓库链接发给正在开发项目的 AI。
 
 适合长期用 Codex、Claude Code 等工具迭代项目的人。一次性小任务可以只借用其中的原则，不必建立整套文档。它不会自动开发你的业务，也不要求特定模型、技术栈或多 Agent。
 
@@ -13,7 +13,7 @@ Project OS 是一个可接入**已有项目**的轻量治理工具包。它帮�
 在你正在开发的项目中，把下面这段话发给 AI：
 
 ```text
-请把 https://github.com/furenzhong/ai_codex_project_os_starter_kit 的文档治理
+请把 https://github.com/furenzhong/awoo-vibe-coding-governance 的文档治理
 接入我当前正在开发的项目。
 
 先按该仓库的接入指南识别源工具包与目标项目，复用我已有的规则和事实来源，
@@ -58,14 +58,16 @@ AI 的详细操作入口是 [接入指南](docs/03_DELIVERY/DELIVERY_PROJECT_INS
 
 任务与证据目录按实际工作需要使用。PRD、API、风险登记等较重模板留在工具包里按需取用，**不整套复制到每个项目**。初始文档需要 AI 从你的项目事实中补齐，文件存在不代表接入已经验收。
 
+为兼容已有接入，`project-os.json`、`project-os/` 与 `scripts/project_os.py` 保留原名；不需要为了品牌更名迁移项目文件。
+
 ## 手动执行 / 检查命令
 
 需要 Python 3.10+ 和 Git；不需要模型 API key 或第三方 Python 包。Windows PowerShell、macOS、Linux 可用同一 Python 入口。以下命令在**目标项目根目录**执行，源工具包放在旁边：
 
 ```text
-git clone https://github.com/furenzhong/ai_codex_project_os_starter_kit.git ../project-os-kit
-python ../project-os-kit/scripts/project_os.py plan --target .
-python ../project-os-kit/scripts/project_os.py apply --target .
+git clone https://github.com/furenzhong/awoo-vibe-coding-governance.git ../awoo-governance-kit
+python ../awoo-governance-kit/scripts/project_os.py plan --target .
+python ../awoo-governance-kit/scripts/project_os.py apply --target .
 python scripts/project_os.py check --target .
 python scripts/project_os.py snapshot --target . --json
 ```
@@ -91,7 +93,7 @@ python scripts/project_os.py snapshot --target . --json
 
 首次接入和读取 / 协作机制大改时，按 [治理试验](docs/03_DELIVERY/GOVERNANCE_TRIAL.md) 在隔离副本中演练：新会话接手、过期陈述、缺验收证据、中断恢复。日常只检查相关变化，不每轮重复整套演练，也不自动创建监控或付费调用。
 
-**机器检查通过只证明被检查的结构与声明满足规则。** 它不能证明产品质量、文档每句话的真实性，或 Agent 实际遵守了要求。没有做过的演练明确写“未测”；有问题就给出证据和最小修正。当前版本的实测范围见 [验收记录](docs/05_HANDOFF/evidence/2026-09-25-v1.1-validation.md)。
+**机器检查通过只证明被检查的结构与声明满足规则。** 它不能证明产品质量、文档每句话的真实性，或 Agent 实际遵守了要求。没有做过的演练明确写“未测”；有问题就给出证据和最小修正。当前版本的实测范围和对应证据见 [当前状态](docs/00_PROJECT_CONTROL/PROJECT_CURRENT_STATUS.md)。
 
 ## Codex → Claude Code 等协作
 

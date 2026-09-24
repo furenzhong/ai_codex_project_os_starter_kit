@@ -42,10 +42,12 @@ from typing import Any
 from urllib.parse import urlsplit
 
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 SCHEMA_VERSION = 1
 MANIFEST = "project-os.json"
-KIT_ORIGIN = "github.com/furenzhong/ai_codex_project_os_starter_kit"
+KIT_ORIGIN = "github.com/furenzhong/awoo-vibe-coding-governance"
+# Retain the former URL for clones and provenance recorded before the rename.
+KIT_ORIGINS = {KIT_ORIGIN, "github.com/furenzhong/ai_codex_project_os_starter_kit"}
 SOURCE_KEYS = ("rules", "status", "handoff", "decisions")
 DEFAULT_SOURCES = {key: f"project-os/{key.upper()}.md" for key in SOURCE_KEYS}
 BEGIN = b"<!-- project-os:begin -->"
@@ -199,7 +201,7 @@ def install_identity(source: Path, target: Path, current: dict[str, Any] | None)
     src, dst = identity(source), identity(target)
     if src["common_dir"] and src["common_dir"] == dst["common_dir"]:
         raise ProjectOSError("Target shares the starter kit's Git common directory (including worktrees).")
-    if dst["origin"] and dst["origin"] in {KIT_ORIGIN, src["origin"]}:
+    if dst["origin"] and dst["origin"] in KIT_ORIGINS | {src["origin"]}:
         raise ProjectOSError("Target origin identifies the starter kit. Do not deploy into a clone of the mother repository.")
     origin = src["origin"]
     # Local remotes are useful for the live identity comparison but should not
@@ -455,7 +457,7 @@ def check_project(root: Path) -> dict[str, Any]:
         if not isinstance(src, dict):
             issue("identity", "source_identity must be an object.", MANIFEST)
             src = {}
-        same_origin = info["origin"] and info["origin"] in {KIT_ORIGIN, src.get("origin")}
+        same_origin = info["origin"] and info["origin"] in KIT_ORIGINS | {src.get("origin")}
         same_common = fingerprint(info["common_dir"]) and fingerprint(info["common_dir"]) == src.get("common_dir_fingerprint")
         if same_origin or same_common:
             issue("identity", "Project manifest is installed in a repository identifying as its starter kit.", MANIFEST)

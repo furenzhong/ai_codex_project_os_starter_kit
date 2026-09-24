@@ -1,4 +1,4 @@
-# Project OS — repository instructions
+# Awoo Vibe Coding Governance — repository instructions
 
 This is the reusable governance **source kit**, not a business project. It helps people keep intent, evidence and unfinished work usable across AI sessions and execution tools.
 

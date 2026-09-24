@@ -4,7 +4,7 @@
 
 ```text
 请将这个治理工具包接入我当前项目：
-https://github.com/furenzhong/ai_codex_project_os_starter_kit
+https://github.com/furenzhong/awoo-vibe-coding-governance
 
 先读取源工具包接入指南，再确认我的目标项目。保留已有业务、Git身份、规则、
 文档和未提交改动；复用我的权威事实来源，只补实际缺口。
