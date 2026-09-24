@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kit_version": "1.1.0",
+  "role": "starter-kit",
+  "sources": {
+    "rules": "AGENTS.md",
+    "status": "docs/00_PROJECT_CONTROL/PROJECT_CURRENT_STATUS.md",
+    "handoff": "docs/05_HANDOFF/HANDOFF_CURRENT.md",
+    "decisions": "docs/04_ISSUES/DECISION_LOG.md"
+  },
+  "tasks_dir": "docs/05_HANDOFF/tasks",
+  "evidence_dir": "docs/05_HANDOFF/evidence"
+}

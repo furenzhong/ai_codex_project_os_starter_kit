@@ -1,0 +1,16 @@
+{
+  "id": "normalize-label",
+  "objective": "Normalize repeated whitespace in a label while preserving letter case.",
+  "base_revision": "0000000000000000000000000000000000000000",
+  "writable_paths": [
+    "src/labels.py",
+    "tests/test_labels.py"
+  ],
+  "acceptance_commands": [
+    "python -m unittest discover -s tests -v"
+  ],
+  "status": "planned",
+  "executor": "project-selected-worker",
+  "worktree": "../label-task",
+  "session_id": "replace-with-actual-session-id"
+}

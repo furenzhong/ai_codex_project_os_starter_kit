@@ -1,0 +1,88 @@
+{
+  "date": "2026-09-25",
+  "kit_version": "1.1.0",
+  "environment": {
+    "os": "Windows",
+    "python": "3.14.0",
+    "git": "2.45.2.windows.1"
+  },
+  "checker_sha256_lf": "7e7f42f2fac3ceb037c7aecc5ecf3728e7e8a4550e54effc350eec9022e9e590",
+  "regression": {
+    "command": "python -m unittest discover -s tests -v",
+    "exit_code": 0,
+    "tests": 32,
+    "seconds": 40.623,
+    "result": "OK"
+  },
+  "integration": {
+    "invariants": {
+      "README.md": true,
+      "src/labels.py": true,
+      "tests/test_labels.py": true,
+      "scratch-note.txt": true,
+      ".git/config": true,
+      "AGENTS.md_prefix_preserved": true,
+      "CLAUDE.md_prefix_preserved": true,
+      "mapped_existing_sources": true,
+      "head_preserved": true,
+      "no_duplicate_default_state": true
+    },
+    "final_checker_exit": 0
+  },
+  "recovery": {
+    "invariants": {
+      "source_unchanged": true,
+      "head_unchanged": true,
+      "accepted_after_review": true,
+      "original_session_retained": true
+    },
+    "final_checker_exit": 0,
+    "harness": {
+      "tasks": 1,
+      "accepted": 1,
+      "state": "accepted_records_checked"
+    }
+  },
+  "trial_isolation": {
+    "agents_had_parent_history": false,
+    "expected_outcomes_given_to_agents": false,
+    "network_calls_allowed": false,
+    "production_data": false
+  },
+  "integration_seconds": 245.3,
+  "recovery_seconds": 162,
+  "not_tested": [
+    "real Claude Code subprocess invocation or resume",
+    "Claude instruction import at runtime",
+    "production recovery or paid operation idempotency",
+    "long-term benefit compared with no governance",
+    "macOS execution"
+  ],
+  "ci": {
+    "workflow": "Governance checks",
+    "observed_result": "success",
+    "matrix": [
+      {
+        "os": "ubuntu-latest",
+        "python": "3.10",
+        "result": "success"
+      },
+      {
+        "os": "ubuntu-latest",
+        "python": "3.14",
+        "result": "success"
+      },
+      {
+        "os": "windows-latest",
+        "python": "3.10",
+        "result": "success"
+      },
+      {
+        "os": "windows-latest",
+        "python": "3.14",
+        "result": "success"
+      }
+    ],
+    "tested_checker_sha256_lf": "7e7f42f2fac3ceb037c7aecc5ecf3728e7e8a4550e54effc350eec9022e9e590"
+  }
+}

@@ -1,0 +1,4 @@
+# Optional project-local Codex configuration.
+# Keep model and execution permissions specific to the actual environment.
+# This kit does not prescribe a model or override the user's global settings.
+# Verify supported keys against the current Codex documentation before adding them.

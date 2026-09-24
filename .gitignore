@@ -1,0 +1,33 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Env / secrets
+.env
+.env.local
+
+# Logs / temp
+*.log
+tmp/
+temp/
+
+# Coverage
+.coverage
+coverage/
+
+# Local development and release work
+work/

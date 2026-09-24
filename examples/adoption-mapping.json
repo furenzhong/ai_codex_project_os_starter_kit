@@ -1,0 +1,10 @@
+{
+  "sources": {
+    "rules": "AGENTS.md",
+    "status": "docs/CURRENT.md",
+    "handoff": "docs/HANDOFF.md",
+    "decisions": "docs/DECISIONS.md"
+  },
+  "tasks_dir": "docs/tasks",
+  "evidence_dir": "docs/evidence"
+}
