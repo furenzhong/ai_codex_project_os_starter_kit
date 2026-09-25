@@ -11,6 +11,7 @@ This is the reusable governance **source kit**, not a business project. It helps
 - Delegating work: `docs/02_TECH/HARNESS_CONTRACT.md`.
 - Testing whether governance helps: `docs/03_DELIVERY/GOVERNANCE_TRIAL.md`.
 - Structure and document ownership: `docs/00_PROJECT_CONTROL/PROJECT_STRUCTURE_AND_NAMING_SPEC.md` and `DOCUMENT_CATALOG.md` in that directory.
+- Document lifecycle and context reduction: `docs/00_PROJECT_CONTROL/DOCUMENT_LIFECYCLE.md`.
 
 ## Interpret the user's destination correctly
 
@@ -24,7 +25,11 @@ Preserve the target's product, code, Git history, remote, existing rules and unc
 
 `project-os.json` maps each authoritative source. Stable instructions live here; mutable project state lives in the status document. Handoff preserves unfinished context and points to state. Briefs and indexes link to those sources rather than maintaining another progress list. Historical observations belong in dated evidence or session records.
 
+Treat working notes, current authority, evidence, and archives differently. At task closure consolidate only touched material: preserve constraints, unresolved work, rejected options and their rationale, and evidence in the appropriate sources. Keep canonical paths stable; mark replaced notes in place or update references before archiving. Read archives only for a specific question. At adoption, phase closure, or a context conflict use `python scripts/project_os.py inventory --target . --json` for read-only signals. Unclassified or identical files are not a deletion list. Delete only within existing authorization after checking dependencies and retention; age, length, or filename alone is insufficient.
+
 Distinguish user requirements, working assumptions, observed facts and acceptance decisions. Evidence must identify the version and checks it covers. Code, running processes and documentation may disagree: investigate the discrepancy and correct the current summary; do not declare a document true merely because it is marked active. Preserve historical evidence.
+
+Lifecycle work starts on a relevant task closure, replaced decision, phase handoff, or a concrete context conflict; a fresh session alone is not a cleanup trigger. Investigate uncertain facts first. Ask the user when unresolved intent, a unique constraint, or deletion outside authorization affects the outcome; show the specific conflict, evidence, recommendation, and impact. Preserve disputed material and pause only dependent actions while waiting. Ordinary reversible organization within existing authorization needs no extra approval.
 
 ## Work in bounded, verifiable steps
 

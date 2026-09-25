@@ -36,13 +36,14 @@ import json
 import os
 from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
+import stat
 import subprocess
 import sys
 from typing import Any
 from urllib.parse import urlsplit
 
 
-VERSION = "1.1.1"
+VERSION = "1.2.0"
 SCHEMA_VERSION = 1
 MANIFEST = "project-os.json"
 KIT_ORIGIN = "github.com/furenzhong/awoo-vibe-coding-governance"
@@ -56,6 +57,21 @@ TASK_STATUSES = {"planned", "running", "submitted", "accepted", "returned", "blo
 LIMITS = (
     "Checks validate local structure, Git object references, declared results, and evidence paths. "
     "They do not execute acceptance commands, establish reviewer identity, or prove product correctness."
+)
+INVENTORY_EXTENSIONS = {".md", ".markdown", ".txt", ".rst"}
+INVENTORY_SKIP_DIRS = {
+    ".git", ".hg", ".svn", "node_modules", "dist", "build", "vendor",
+    "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".cache",
+    ".tox", ".venv", "venv", "coverage", ".next", ".nuxt",
+}
+INVENTORY_ARCHIVE_PREFIXES = {"docs/06_archive", "archive", "archives"}
+INVENTORY_METADATA_KEYS = {"lifecycle", "topic", "created", "superseded_by", "archived_reason"}
+INVENTORY_RETIRED = {"archived", "superseded", "obsolete"}
+INVENTORY_LIMITS = (
+    "Categories use declared mappings, document front matter, and paths; they do not measure actual agent context. "
+    "Only the reported file extensions and reading entrypoints are scanned, excluding the reported directories and links. "
+    "Exact duplicates are review candidates; unclassified documents are not garbage. "
+    "No files are moved, rewritten, or deleted. Truth, freshness, semantic duplication, and deletion eligibility require review."
 )
 
 
@@ -225,6 +241,29 @@ Use existing code, tests, and observed behavior to check claims about reality.
 Keep one authoritative source for each fact; link to task evidence instead of
 copying task state into multiple documents. Add detail only when it prevents a
 specific recurring mistake.
+
+At task closure, consolidate only the material touched by that task. Preserve
+the current conclusion, constraints, unresolved questions, rejected options
+and their rationale, evidence, and conditions for reopening the decision.
+Keep canonical source paths stable. Working notes and archives are read on
+demand, not preloaded as current instructions. Mark replaced standalone notes
+with lifecycle: superseded and a replacement link in top-of-file front matter;
+update incoming references before moving them. Uncertain or unfinished material
+stays working/candidate. Trigger related-material consolidation when a decision
+is replaced, a phase closes, or conflicting current claims/rediscovered rejected
+options obstruct work. A new session alone does not trigger a repository sweep.
+Use `python scripts/project_os.py inventory --target . --json` at adoption, phase
+closure, or a concrete context conflict for a read-only inventory. Unclassified
+and exact duplicate candidates are not deletion lists.
+Investigate uncertainty in existing requirements, decisions, code, and evidence
+first. Ask the user only when the answer changes intent, retention, or authority
+and cannot be established there: conflicting requirements, a possibly unique
+constraint, or deletion outside existing authorization. State the concrete
+conflict, evidence, recommendation, and consequence. Preserve unresolved material
+and pause only dependent actions while awaiting an answer; silence is not consent.
+Routine reversible organization within authorization does not need reapproval.
+Delete only within existing user/project authorization after checking unique
+content, references, active tasks, and retention needs; age alone is insufficient.
 
 ## 当前约束 / Current constraints
 
@@ -619,9 +658,190 @@ def snapshot(root: Path) -> dict[str, Any]:
     return report
 
 
+def inventory_metadata(text: str) -> tuple[dict[str, str], list[str]]:
+    """Read only simple, top-level scalar keys in closed leading front matter.
+
+    This deliberately is not a YAML parser. Body text, indented keys, fenced
+    examples, collections, and multiline YAML values do not provide metadata.
+    """
+    lines = text.splitlines()
+    if not lines or lines[0].rstrip() != "---":
+        return {}, []
+    closing = next((i for i, line in enumerate(lines[1:], 1) if line.rstrip() == "---"), None)
+    if closing is None:
+        return {}, ["Leading front matter is not closed; no lifecycle metadata was used."]
+    metadata: dict[str, str] = {}
+    invalid: set[str] = set()
+    messages: list[str] = []
+    for line in lines[1:closing]:
+        match = re.fullmatch(r"([a-z_]+):[ \t]*(.*)", line)
+        if not match or match[1] not in INVENTORY_METADATA_KEYS:
+            continue
+        key, raw = match[1], match[2].strip()
+        if key in metadata or key in invalid:
+            metadata.pop(key, None)
+            invalid.add(key)
+            messages.append(f"Duplicate front-matter key {key}; its value was ignored.")
+            continue
+        if raw.startswith(('"', "'")):
+            # Quoted scalars may contain #; a comment may follow the closing quote.
+            quoted = re.fullmatch(r'''"([^"\\]*)"(?:\s+#.*)?|'([^']*)'(?:\s+#.*)?''', raw)
+            value = next((part for part in quoted.groups() if part is not None), "") if quoted else None
+        else:
+            value = re.split(r"\s+#", raw, maxsplit=1)[0].strip()
+            if value.startswith(("#", "[", "{", "|", ">", "&", "*", "!")):
+                value = None
+        if value is None:
+            invalid.add(key)
+            messages.append(f"Unsupported front-matter value for {key}; use a simple single-line scalar.")
+        elif value:
+            metadata[key] = value
+    return metadata, messages
+
+
+def inventory_link(path: Path) -> bool:
+    """Exclude Windows reparse points too, including junctions on Python 3.10."""
+    info = path.lstat()
+    return stat.S_ISLNK(info.st_mode) or bool(
+        getattr(info, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    )
+
+
+def inventory(root: Path) -> dict[str, Any]:
+    """Report document lifecycle signals without moving, rewriting, or deleting files."""
+    root = root.resolve()
+    report: dict[str, Any] = {
+        "command": "inventory", "ok": False, "target": str(root),
+        "documents": [], "reading_entrypoints": [], "working_documents": [],
+        "evidence_documents": [], "archive_documents": [], "unclassified": [],
+        "duplicate_candidates": [], "warnings": [], "skipped_paths": [],
+        "scope": {
+            "extensions": sorted(INVENTORY_EXTENSIONS),
+            "ignored_directory_names": sorted(INVENTORY_SKIP_DIRS),
+            "archive_directory_prefixes": sorted(INVENTORY_ARCHIVE_PREFIXES),
+            "metadata_keys": sorted(INVENTORY_METADATA_KEYS),
+            "follows_links": False,
+        },
+        "limits": INVENTORY_LIMITS,
+    }
+
+    def warning(code: str, relative: str, message: str) -> None:
+        report["warnings"].append({"code": code, "path": relative, "message": message})
+
+    def skipped(path: Path, reason: str) -> None:
+        report["skipped_paths"].append({"path": path.relative_to(root).as_posix(), "reason": reason})
+
+    try:
+        data = read_json(safe_path(root, MANIFEST))
+        manifest_shape(root, data)
+    except ProjectOSError as exc:
+        warning("manifest", MANIFEST, str(exc))
+        return report
+    mapped_sources = {safe_path(root, value).relative_to(root).as_posix() for value in data["sources"].values()}
+    entries = {"AGENTS.md", "CLAUDE.md"}
+    expected_entrypoints = mapped_sources | entries
+    evidence_dir = safe_path(root, data["evidence_dir"])
+    by_hash: dict[str, list[str]] = {}
+
+    def walk_error(error: OSError) -> None:
+        path = Path(error.filename) if error.filename else root
+        skipped(path, "unreadable_directory")
+        warning("unreadable", path.relative_to(root).as_posix(), str(error))
+
+    for directory, dirs, files in os.walk(root, topdown=True, followlinks=False, onerror=walk_error):
+        parent = Path(directory)
+        retained = []
+        for name in sorted(dirs):
+            path = parent / name
+            try:
+                if inventory_link(path):
+                    skipped(path, "link_or_reparse_point")
+                elif name.casefold() in INVENTORY_SKIP_DIRS:
+                    skipped(path, "ignored_directory")
+                else:
+                    retained.append(name)
+            except OSError as exc:
+                skipped(path, "unreadable_directory")
+                warning("unreadable", path.relative_to(root).as_posix(), str(exc))
+        dirs[:] = retained  # Prune before traversal, including directory junctions.
+        for name in sorted(files):
+            path = parent / name
+            relative = path.relative_to(root).as_posix()
+            try:
+                if inventory_link(path):
+                    skipped(path, "link_or_reparse_point")
+                    continue
+                if path.suffix.lower() not in INVENTORY_EXTENSIONS and relative not in expected_entrypoints:
+                    continue
+                if not stat.S_ISREG(path.lstat().st_mode):
+                    skipped(path, "not_regular_file")
+                    continue
+                content = path.read_bytes()
+            except OSError as exc:
+                skipped(path, "unreadable_file")
+                warning("unreadable", relative, str(exc))
+                continue
+            metadata, messages = inventory_metadata(content.decode("utf-8-sig", errors="replace"))
+            for message in messages:
+                warning("metadata", relative, message)
+            lifecycle = metadata.get("lifecycle", "").lower() or None
+            if lifecycle and lifecycle not in INVENTORY_RETIRED | {"active", "working", "candidate"}:
+                warning("unknown_lifecycle", relative, f"Unknown lifecycle value: {lifecycle}.")
+            in_archive = any(relative.casefold().startswith(prefix + "/") for prefix in INVENTORY_ARCHIVE_PREFIXES)
+            retired = lifecycle in INVENTORY_RETIRED
+            if relative in mapped_sources:
+                category = "mapped_source"
+            elif relative in entries:
+                category = "entry"
+            elif in_archive or retired:
+                category = "archive"
+            elif path.is_relative_to(evidence_dir):
+                category = "evidence"
+            elif lifecycle in {"working", "candidate"}:
+                category = "working"
+            else:
+                category = "unclassified"
+            digest = hashlib.sha256(content).hexdigest()
+            report["documents"].append({
+                "path": relative, "bytes": len(content), "sha256": digest,
+                "category": category, "lifecycle": lifecycle, "metadata": metadata,
+                "in_archive_directory": in_archive,
+            })
+            by_hash.setdefault(digest, []).append(relative)
+            collection = {
+                "mapped_source": "reading_entrypoints", "entry": "reading_entrypoints",
+                "archive": "archive_documents", "evidence": "evidence_documents",
+                "working": "working_documents", "unclassified": "unclassified",
+            }[category]
+            report[collection].append(relative)
+            if relative in expected_entrypoints and (retired or in_archive):
+                warning("retired_reading_entrypoint", relative, "A declared reading entrypoint is marked retired or located in an archive. Reconcile the mapping and replacement before changing it.")
+            # Archive directory guides describe the container, not a retired decision.
+            archive_guide = path.name.casefold() in {"readme.md", "readme.markdown", "readme.txt", "readme.rst"}
+            if (in_archive or retired) and not (archive_guide and not retired):
+                if not lifecycle:
+                    warning("archive_without_lifecycle", relative, "Archive material has no explicit lifecycle in leading front matter.")
+                elif not retired:
+                    warning("archive_lifecycle_conflict", relative, "Archive path conflicts with its declared lifecycle.")
+                if not metadata.get("archived_reason"):
+                    warning("archive_without_reason", relative, "Archive material should state archived_reason in leading front matter.")
+            if len(content) > 24_000 and relative in entries:
+                warning("large_entry", relative, "Entry is large; keep durable rules short and link detail behind focused sources.")
+    scanned = {item["path"] for item in report["documents"]}
+    for relative in sorted(mapped_sources - scanned):
+        warning("unscanned_source", relative, "Mapped source was missing or outside the readable scan scope; inspect it explicitly.")
+    report["duplicate_candidates"] = sorted(sorted(group) for group in by_hash.values() if len(group) > 1)
+    report["documents"].sort(key=lambda item: item["path"])
+    for key in ("reading_entrypoints", "working_documents", "evidence_documents", "archive_documents", "unclassified"):
+        report[key].sort()
+    report["skipped_paths"].sort(key=lambda item: item["path"])
+    report["ok"] = True
+    return report
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("plan", "apply", "check", "snapshot"))
+    parser.add_argument("command", choices=("plan", "apply", "check", "snapshot", "inventory"))
     parser.add_argument("--target", required=True, help="Existing project root; never a destination to clone or overwrite.")
     parser.add_argument("--mapping", help="JSON file relative to the current working directory. Its sources/tasks_dir/evidence_dir paths are relative to --target; existing mapped documents are adopted.")
     parser.add_argument("--json", action="store_true", help="Emit a machine-readable report.")
@@ -637,13 +857,17 @@ def main(argv: list[str] | None = None) -> int:
                 apply_plan(target, operations)
                 report["command"] = "apply"
         else:
-            report = check_project(target) if args.command == "check" else snapshot(target)
+            report = check_project(target) if args.command == "check" else snapshot(target) if args.command == "snapshot" else inventory(target)
     except (ProjectOSError, OSError) as exc:
         report = {"command": args.command, "ok": False, "errors": [{"code": "preflight", "message": str(exc)}], "limits": LIMITS}
     if args.json:
         print(json.dumps(report, ensure_ascii=False, indent=2))
     else:
-        print(f"{args.command}: {'PASS' if report['ok'] else 'FAIL'} (structural checks only)")
+        qualifier = "read-only document signals" if args.command == "inventory" else "structural checks only"
+        print(f"{args.command}: {'PASS' if report['ok'] else 'FAIL'} ({qualifier})")
+        if args.command == "inventory" and "documents" in report:
+            print(f"Documents: {len(report['documents'])}; reading entrypoints: {len(report['reading_entrypoints'])}; working: {len(report['working_documents'])}; evidence: {len(report['evidence_documents'])}; archive: {len(report['archive_documents'])}; unclassified: {len(report['unclassified'])}")
+            print(f"Exact duplicate groups: {len(report['duplicate_candidates'])}; skipped paths: {len(report['skipped_paths'])}. Use --json for paths, metadata, and scan scope.")
         if "changes" in report:
             print(f"Planned changes: {report['changes']}")
         for operation in report.get("operations", []):
@@ -655,7 +879,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  {kind[:-1]}: {item.get('path', '')} {item['message']}")
         if "harness" in report:
             print(f"Harness: {report['harness']['state']}")
-        print(LIMITS)
+        print(report.get("limits", LIMITS))
     return 0 if report["ok"] else 1
 
 

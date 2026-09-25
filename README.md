@@ -36,6 +36,7 @@ AI 的详细操作入口是 [接入指南](docs/03_DELIVERY/DELIVERY_PROJECT_INS
 | Codex 交给 Claude Code 后难以接回 | 明确任务基线、写入归属、会话、交付及恢复合同 |
 | 把源仓库部署成了另一套业务项目 | 接入前核对源 / 目标身份，保留目标 Git 与业务内容 |
 | 文档越写越多，不知道有没有用 | AI 进行接手和故障演练，报告结果与维护负担 |
+| 旧方案混入当前要求，整理时又丢掉未决问题 | 收敛当前结论，保留原因、约束与未决项，旧材料按需追溯 |
 
 先验证最关键的不确定性。页面流程可以用 Mock；模型效果、真实接口或生成质量需要相应的实际证据。模板不会要求每个项目先建前后端和规则引擎。
 
@@ -70,14 +71,20 @@ python ../awoo-governance-kit/scripts/project_os.py plan --target .
 python ../awoo-governance-kit/scripts/project_os.py apply --target .
 python scripts/project_os.py check --target .
 python scripts/project_os.py snapshot --target . --json
+python scripts/project_os.py inventory --target . --json
 ```
 
 - `plan` 只读列出接入操作和冲突，AI 核对后可在既有授权内执行 `apply`。
 - `apply` 增量创建 / 追加；重复执行不覆盖用户内容。工具遇到冲突会报告，不会用覆盖整个项目来解决。
 - `check` 检查声明的路径、入口、任务与证据一致性；不调用模型、业务服务或网络。
 - `snapshot` 输出当前可观察信息，不自动改写项目状态。
+- `inventory` 只读盘点 Markdown 等文档，报告入口、工作材料、证据、归档、未归类项、完全重复候选和生命周期冲突。分类依据声明和路径，不代表 AI 实际读取范围；未归类不等于垃圾。它不自动归档、合并或删除。
 
 已有文档通过 `--mapping` 接入，见 [映射示例](examples/adoption-mapping.json) 和 [接入指南](docs/03_DELIVERY/DELIVERY_PROJECT_INSTANTIATION_GUIDE_v1.md)。示例路径必须替换成目标的真实路径。首次采用和已有部署升级是不同工作；更新时先比较差异，保留项目自有内容。
+
+开发过程中产生的调研、候选方案和阶段计划不应全部进入每次 AI 会话。按 [文档生命周期](docs/00_PROJECT_CONTROL/DOCUMENT_LIFECYCLE.md) 先收敛当前结论，保住用户约束、否决原因、未决问题和证据，再标记替代关系或归档。日常只整理本轮材料，阶段结束或发生上下文冲突时再盘点；不每轮扫描全仓库。验收看新 AI 能否找对当前决定并保留未决问题，不看删除了多少文件。删除不是默认动作。
+
+启动由 AI 在任务收尾、决定替代、阶段交接或发现具体冲突时判断；新会话本身不触发全仓整理。先查证据，只有无法裁定的用户意图、可能丢失的独有约束或超出授权的删除才提问。提问说明具体来源、推荐和影响；等答复时保留材料，仅暂停依赖该答案的动作。
 
 ## AI 在使用，我怎么知道它有用
 

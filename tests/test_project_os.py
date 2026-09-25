@@ -430,6 +430,158 @@ class ProjectOSRegressionTests(unittest.TestCase):
         self.assertEqual(report["git"]["head"], run_git(self.target, "rev-parse", "HEAD"))
         self.assertEqual(before, file_bytes(self.target))
 
+    def test_inventory_uses_explicit_working_and_custom_evidence_signals(self):
+        self.install({"evidence_dir": "verification/results"})
+        (self.target / "notes").mkdir()
+        for name, content in {
+            "working.md": "---\nlifecycle: working # still being explored\ntopic: checkout\ncreated: 2020-01-01\n---\n# Working note\n",
+            "candidate.md": "---\nlifecycle: candidate\n---\n# Proposed change\n",
+            "unclassified.md": "# A useful note without a lifecycle declaration\n",
+        }.items():
+            (self.target / "notes" / name).write_text(content, encoding="utf-8")
+        (self.target / "verification/results/check.txt").write_text("A test log\n", encoding="utf-8")
+        report = project_os.inventory(self.target)
+        self.assertTrue(report["ok"], report["warnings"])
+        self.assertEqual(report["working_documents"], ["notes/candidate.md", "notes/working.md"])
+        self.assertEqual(report["evidence_documents"], ["verification/results/check.txt"])
+        self.assertIn("notes/unclassified.md", report["unclassified"])
+        self.assertNotIn("notes/working.md", report["unclassified"])
+        self.assertIn("AGENTS.md", report["reading_entrypoints"])
+        self.assertIn("project-os/STATUS.md", report["reading_entrypoints"])
+        items = {item["path"]: item for item in report["documents"]}
+        self.assertEqual(items["notes/working.md"]["metadata"]["created"], "2020-01-01")
+        self.assertFalse(any("fresh" in warning["code"] for warning in report["warnings"]))
+
+    def test_inventory_does_not_interpret_examples_body_or_unclosed_front_matter(self):
+        self.install()
+        examples = {
+            "fenced.md": "```yaml\n---\nlifecycle: archived\n---\n```\n",
+            "tilde.md": "~~~yaml\nlifecycle: archived\n~~~\n",
+            "body.md": "# How to classify\n---\nlifecycle: archived\n---\n",
+            "log.txt": "Command output:\nlifecycle: obsolete\n",
+            "unclosed.md": "---\nlifecycle: archived\n# Missing closing delimiter\n",
+            "indented.md": "---\nexample:\n  lifecycle: archived\n---\n",
+        }
+        for name, content in examples.items():
+            (self.target / name).write_text(content, encoding="utf-8")
+        report = project_os.inventory(self.target)
+        items = {item["path"]: item for item in report["documents"]}
+        for name in examples:
+            with self.subTest(name=name):
+                self.assertIn(name, report["unclassified"])
+                self.assertIsNone(items[name]["lifecycle"])
+        self.assertTrue(any(w["code"] == "metadata" and w["path"] == "unclosed.md" for w in report["warnings"]))
+
+    def test_inventory_detects_retired_markers_and_missing_archive_metadata(self):
+        self.install()
+        archive = self.target / "docs/06_ARCHIVE"
+        archive.mkdir(parents=True)
+        (archive / "README.md").write_text("# Retained documents\n", encoding="utf-8")
+        (archive / "unmarked.md").write_text("# Old plan\n", encoding="utf-8")
+        (archive / "no-reason.md").write_text("---\nlifecycle: archived\n---\n# Old option\n", encoding="utf-8")
+        (self.target / "own-history").mkdir()
+        (self.target / "own-history/old.md").write_text(
+            '\ufeff---\nlifecycle: superseded # retained context\narchived_reason: "Replaced by decision #2" # comment\nsuperseded_by: project-os/DECISIONS.md#decision-2\n---\n# Old\n',
+            encoding="utf-8",
+        )
+        report = project_os.inventory(self.target)
+        items = {item["path"]: item for item in report["documents"]}
+        self.assertIsNone(items["docs/06_ARCHIVE/unmarked.md"]["lifecycle"])
+        self.assertEqual(items["own-history/old.md"]["category"], "archive")
+        self.assertEqual(items["own-history/old.md"]["metadata"]["archived_reason"], "Replaced by decision #2")
+        self.assertEqual(items["own-history/old.md"]["metadata"]["superseded_by"], "project-os/DECISIONS.md#decision-2")
+        self.assertIn("own-history/old.md", report["archive_documents"])
+        warnings = {(w["path"], w["code"]) for w in report["warnings"]}
+        self.assertIn(("docs/06_ARCHIVE/unmarked.md", "archive_without_lifecycle"), warnings)
+        self.assertIn(("docs/06_ARCHIVE/unmarked.md", "archive_without_reason"), warnings)
+        self.assertIn(("docs/06_ARCHIVE/no-reason.md", "archive_without_reason"), warnings)
+        self.assertFalse(any(path.endswith("README.md") or path == "own-history/old.md" for path, _ in warnings))
+
+    def test_inventory_retired_mapped_source_stays_a_visible_reading_entrypoint(self):
+        self.install()
+        path = self.target / "project-os/STATUS.md"
+        path.write_text("---\nlifecycle: obsolete\narchived_reason: replaced\n---\n# Former status\n", encoding="utf-8")
+        report = project_os.inventory(self.target)
+        self.assertIn("project-os/STATUS.md", report["reading_entrypoints"])
+        item = next(item for item in report["documents"] if item["path"] == "project-os/STATUS.md")
+        self.assertEqual(item["category"], "mapped_source")
+        self.assertTrue(any(w["code"] == "retired_reading_entrypoint" and w["path"] == "project-os/STATUS.md" for w in report["warnings"]))
+
+    def test_inventory_reports_exact_duplicates_without_semantic_merge(self):
+        self.install()
+        (self.target / "a.md").write_text("same\n", encoding="utf-8")
+        (self.target / "b.md").write_text("same\n", encoding="utf-8")
+        report = project_os.inventory(self.target)
+        self.assertIn(sorted(["a.md", "b.md"]), report["duplicate_candidates"])
+
+    def test_inventory_installed_cli_is_read_only_and_explains_its_limits(self):
+        self.install()
+        (self.target / "notes").mkdir()
+        (self.target / "notes/working.md").write_text("# Working note\n", encoding="utf-8")
+        before = file_bytes(self.target)
+        git_before = run_git(self.target, "status", "--porcelain=v1")
+        command = [sys.executable, str(self.target / "scripts/project_os.py"), "inventory", "--target", str(self.target)]
+        result = subprocess.run(command + ["--json"], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        report = json.loads(result.stdout)
+        self.assertTrue(report["ok"])
+        self.assertIn("notes/working.md", report["unclassified"])
+        plain = subprocess.run(command, capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(plain.returncode, 0, plain.stderr + plain.stdout)
+        self.assertIn("reading entrypoints:", plain.stdout)
+        self.assertIn("unclassified documents are not garbage", plain.stdout)
+        self.assertIn("do not measure actual agent context", plain.stdout)
+        self.assertEqual(before, file_bytes(self.target))
+        self.assertEqual(git_before, run_git(self.target, "status", "--porcelain=v1"))
+
+    def test_inventory_prunes_generated_directories_and_reports_scan_scope(self):
+        self.install()
+        for directory in ("node_modules/deep", "nested/.cache/deep", "build/deep", ".git/test-documents"):
+            path = self.target / directory
+            path.mkdir(parents=True)
+            (path / "should-not-be-read.md").write_text("A generated document\n", encoding="utf-8")
+        report = project_os.inventory(self.target)
+        self.assertFalse(any(item["path"].endswith("should-not-be-read.md") for item in report["documents"]))
+        skipped = {item["path"]: item["reason"] for item in report["skipped_paths"]}
+        for relative in ("node_modules", "nested/.cache", "build", ".git"):
+            self.assertEqual(skipped[relative], "ignored_directory")
+        self.assertIn("node_modules", report["scope"]["ignored_directory_names"])
+        self.assertIn(".md", report["scope"]["extensions"])
+
+    def test_inventory_skips_external_file_and_directory_symlinks(self):
+        self.install()
+        outside = self.root / "external-documents"
+        outside.mkdir()
+        (outside / "secret.md").write_text("external document\n", encoding="utf-8")
+        try:
+            (self.target / "external-dir").symlink_to(outside, target_is_directory=True)
+            self.addCleanup((self.target / "external-dir").unlink)
+            (self.target / "external.md").symlink_to(outside / "secret.md")
+            self.addCleanup((self.target / "external.md").unlink)
+        except OSError:
+            self.skipTest("Host does not allow symlinks")
+        report = project_os.inventory(self.target)
+        self.assertFalse(any(item["path"].startswith("external") for item in report["documents"]))
+        skipped = {item["path"]: item["reason"] for item in report["skipped_paths"]}
+        self.assertEqual(skipped["external-dir"], "link_or_reparse_point")
+        self.assertEqual(skipped["external.md"], "link_or_reparse_point")
+        self.assertEqual((outside / "secret.md").read_text(encoding="utf-8"), "external document\n")
+
+    @unittest.skipUnless(os.name == "nt", "Windows junction regression")
+    def test_inventory_does_not_follow_windows_junctions(self):
+        self.install()
+        outside = self.root / "junction-documents"
+        outside.mkdir()
+        (outside / "secret.md").write_text("external document\n", encoding="utf-8")
+        junction = self.target / "junction"
+        result = subprocess.run(["cmd", "/c", "mklink", "/J", str(junction), str(outside)], capture_output=True)
+        if result.returncode:
+            self.skipTest("Host cannot create junctions")
+        self.addCleanup(junction.rmdir)
+        report = project_os.inventory(self.target)
+        self.assertFalse(any(item["path"].startswith("junction/") for item in report["documents"]))
+        self.assertIn({"path": "junction", "reason": "link_or_reparse_point"}, report["skipped_paths"])
+
 
 if __name__ == "__main__":
     unittest.main()

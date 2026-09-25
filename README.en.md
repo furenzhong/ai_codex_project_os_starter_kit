@@ -41,6 +41,7 @@ The AI's operational entry is the [integration guide](docs/03_DELIVERY/DELIVERY_
 | Work delegated from Codex to Claude Code is difficult to reclaim | Define the baseline, write ownership, session, delivery, and recovery contract |
 | Installing a kit replaces the project's identity | Check source and target identities; preserve the target's Git and business content |
 | Documentation grows without visible benefit | Run AI handoff and failure exercises; report outcomes and maintenance effort |
+| Old proposals become current requirements, or cleanup loses open questions | Consolidate conclusions, constraints, rationale, and unresolved work; retrieve history on demand |
 
 Start with the smallest experiment that tests the most consequential uncertainty. Mock data may validate a UI flow; model quality, provider behavior, and generated output need relevant empirical evidence. Templates do not require every project to build a frontend, backend, or rules engine first.
 
@@ -75,14 +76,20 @@ python ../awoo-governance-kit/scripts/project_os.py plan --target .
 python ../awoo-governance-kit/scripts/project_os.py apply --target .
 python scripts/project_os.py check --target .
 python scripts/project_os.py snapshot --target . --json
+python scripts/project_os.py inventory --target . --json
 ```
 
 - `plan` reads the project and lists proposed changes and conflicts. After inspecting it, the AI can `apply` within the user's existing authorization.
 - `apply` creates or appends incrementally. Repeated use preserves user content. Conflicts are reported rather than resolved by replacing the project.
 - `check` checks declared paths, entrypoints, tasks, and evidence consistency. It calls no model, application service, or network endpoint.
 - `snapshot` reports observable state without rewriting project status.
+- `inventory` reads Markdown and related documents and reports entrypoints, working material, evidence, archives, unclassified files, exact duplicate candidates, and lifecycle conflicts. Classification uses declarations and paths, not observed AI reading; unclassified does not mean disposable. It never archives, merges, or deletes files automatically.
 
 Use `--mapping` to adopt existing documents; see the [mapping example](examples/adoption-mapping.json) and [integration guide](docs/03_DELIVERY/DELIVERY_PROJECT_INSTANTIATION_GUIDE_v1.md). Replace example paths with real target paths. First adoption and upgrading an existing installation are different operations: compare changes and preserve project-owned content when upgrading.
+
+Research notes, candidate designs, and phase plans should not all enter every AI session. Follow the [document lifecycle](docs/00_PROJECT_CONTROL/DOCUMENT_LIFECYCLE.md) to consolidate current conclusions while preserving user constraints, rejected options and their rationale, open questions, and evidence before marking replacements or archiving. During normal work, consolidate only material touched by that task; run an inventory at phase closure or when context conflicts, not every turn. Judge success by whether a fresh AI finds the current decision and preserves unresolved work, not by the number of deleted files. Deletion is never the default action.
+
+The AI triggers relevant consolidation at task closure, a replaced decision, a phase handoff, or a concrete conflict; a new session alone does not trigger a repository sweep. Inspect evidence first, and ask only about unresolved user intent, a unique constraint that might be lost, or deletion outside existing authorization. State the specific sources, recommendation, and impact. While awaiting an answer, preserve the material and pause only dependent actions.
 
 ## How to tell whether it helps when the AI uses it
 

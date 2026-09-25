@@ -1,0 +1,49 @@
+{
+  "version": "1.2.0",
+  "environment": {
+    "platform": "win32",
+    "python": "3.14.0"
+  },
+  "source_base_revision": "702b04bac9e5bb4595f83a6a26c2a563e9d9b984",
+  "dirty": true,
+  "source_hashes_lf": {
+    "scripts/project_os.py": "6afce0b0a380c6213ed54c55163e385060a425d4aadc8e8465abbbb6cabdcb68",
+    "tests/test_project_os.py": "126fb7f687e16595a20cb0712427a93b27e345c0f42a0ee68866cdda7da266ff"
+  },
+  "tests": {
+    "command": "python -m unittest discover -s tests -v",
+    "exit_code": 0,
+    "summary": "Ran 43 tests in 51.244s\n\nOK",
+    "log": "2026-09-26-v1.2-tests.txt"
+  },
+  "checks": {
+    "check": {
+      "ok": true,
+      "warnings": [],
+      "errors": [],
+      "harness": {
+        "tasks": 0,
+        "accepted": 0,
+        "state": "not_exercised"
+      }
+    },
+    "inventory": {
+      "ok": true,
+      "warnings": [],
+      "counts": {
+        "documents": 63,
+        "reading_entrypoints": 5,
+        "working_documents": 0,
+        "evidence_documents": 5,
+        "archive_documents": 1,
+        "unclassified": 52,
+        "duplicate_candidates": 0
+      }
+    }
+  },
+  "relative_markdown_links": {
+    "checked": 106,
+    "missing": []
+  },
+  "git_diff_check_exit_code": 0
+}

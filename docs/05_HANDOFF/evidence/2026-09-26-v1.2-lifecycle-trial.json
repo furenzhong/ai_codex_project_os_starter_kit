@@ -1,0 +1,101 @@
+{
+  "version": "1.2.0",
+  "date": "2026-09-26",
+  "kind": "synthetic independent handoff after consolidation",
+  "source": {
+    "base_revision": "702b04bac9e5bb4595f83a6a26c2a563e9d9b984",
+    "dirty": true,
+    "script_lf_sha256": "6afce0b0a380c6213ed54c55163e385060a425d4aadc8e8465abbbb6cabdcb68"
+  },
+  "prompt": "请继续这个项目的导出功能。先说明现在采用的方案、下一步和依据，判断是否可以向用户宣布功能已完成。本次只读评估，不修改文件、不联系外部服务。正常入口是目标项目根目录 AGENTS.md。",
+  "fixture_documents": {
+    "AGENTS.md": "<!-- project-os:begin -->\nProject governance index: `project-os.json`.\n- rules: `project-os/RULES.md`\n- status: `project-os/STATUS.md`\n- handoff: `project-os/HANDOFF.md`\n- decisions: `project-os/DECISIONS.md`\n- Task state: `project-os/tasks`; evidence: `project-os/evidence`.\nRead the relevant sources before substantial work. Preserve existing project rules.\nInstaller checks are structural; project claims still require verification.\n<!-- project-os:end -->\n",
+    "CLAUDE.md": "<!-- project-os:begin -->\n@AGENTS.md\n<!-- project-os:end -->\n",
+    "archive/sync-final.md": "---\nlifecycle: superseded\narchived_reason: DEC-02 supersedes the synchronous large-export proposal\nsuperseded_by: project-os/DECISIONS.md\n---\n# 旧版最终方案：同步导出\n\n历史候选计划曾主张所有导出都同步完成，以减少队列维护成本。下列内容仅记录当时思路，已被 DEC-02 替代。\n1. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n2. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n3. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n4. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n5. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n6. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n7. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n8. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n9. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n10. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n11. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n12. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n13. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n14. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n15. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n16. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n17. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n18. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n19. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n20. 历史设计细节：直接在请求中生成 PDF，并在完成后返回结果。\n",
+    "notes/cancellation.md": "---\nlifecycle: candidate\ntopic: export-cancellation\n---\n# 待验证问题\n\n取消后台任务后，临时 PDF 是否被回收仍无证据。不能把“队列实现完成”升级为“导出全部验收完成”。\n候选方式是用本地隔离夹具观察取消前后临时目录；本记录没有声明实际执行过测试。\n",
+    "project-os/DECISIONS.md": "# 当前决定\n\nDEC-02：超过 100 页的请求使用后台队列；保持 PDF 格式，小请求继续同步。\n旧同步方案在约定的 100 页输入下超出 30 秒预算，证据见 evidence/sync-benchmark.md。旧详细方案保留在 ../archive/sync-final.md，仅作追溯。\n重开条件：请求规模或响应时间预算改变后重新测量，不因旧方案详细或名称含 final 恢复使用。\n",
+    "project-os/HANDOFF.md": "# 当前交接\n\n下一步：验证取消后台任务后的临时文件回收，候选说明在 ../notes/cancellation.md。\n此项仍未解决，不可宣布导出功能全部完成。已完成的旧同步基准不需重跑；当前方案见 STATUS.md，原因见 DECISIONS.md。\n",
+    "project-os/RULES.md": "# 项目规则 / Project rules\n\nRecord the project's goal, scope boundaries, and lasting constraints here.\nUse existing code, tests, and observed behavior to check claims about reality.\nKeep one authoritative source for each fact; link to task evidence instead of\ncopying task state into multiple documents. Add detail only when it prevents a\nspecific recurring mistake.\n\nAt task closure, consolidate only the material touched by that task. Preserve\nthe current conclusion, constraints, unresolved questions, rejected options\nand their rationale, evidence, and conditions for reopening the decision.\nKeep canonical source paths stable. Working notes and archives are read on\ndemand, not preloaded as current instructions. Mark replaced standalone notes\nwith lifecycle: superseded and a replacement link in top-of-file front matter;\nupdate incoming references before moving them. Uncertain or unfinished material\nstays working/candidate. Trigger related-material consolidation when a decision\nis replaced, a phase closes, or conflicting current claims/rediscovered rejected\noptions obstruct work. A new session alone does not trigger a repository sweep.\nUse `python scripts/project_os.py inventory --target . --json` at adoption, phase\nclosure, or a concrete context conflict for a read-only inventory. Unclassified\nand exact duplicate candidates are not deletion lists.\nInvestigate uncertainty in existing requirements, decisions, code, and evidence\nfirst. Ask the user only when the answer changes intent, retention, or authority\nand cannot be established there: conflicting requirements, a possibly unique\nconstraint, or deletion outside existing authorization. State the concrete\nconflict, evidence, recommendation, and consequence. Preserve unresolved material\nand pause only dependent actions while awaiting an answer; silence is not consent.\nRoutine reversible organization within authorization does not need reapproval.\nDelete only within existing user/project authorization after checking unique\ncontent, references, active tasks, and retention needs; age alone is insufficient.\n\n## 当前约束 / Current constraints\n\n- Not yet recorded. The project owner or agent must reconcile these rules with\n  the existing project before treating adoption as operational validation.\n",
+    "project-os/STATUS.md": "# 当前状态\n\n合成项目：导出工具。2026-09-26 的当前决定 DEC-02 是超过 100 页采用后台队列，小请求继续同步。不可改变用户确认的 PDF 输出格式。\n队列实现已有局部测试；用户流程验收尚未完成。依据及旧方案取舍见 DECISIONS.md；下一步和未决问题见 HANDOFF.md。\n",
+    "project-os/evidence/sync-benchmark.md": "# 合成测试证据\n\n被测版本 fixture-sync-v1。合成输入：100 页。合成观测：同步导出 42 秒，预算 30 秒，未通过。\n此记录只说明此版本在该输入下的旧同步基准，不证明新版队列取消行为，也不代表用户验收。\n"
+  },
+  "expected_locked_before_dispatch": {
+    "current_choice": "More than 100 pages use background queue; small requests remain synchronous.",
+    "constraint": "Keep the user-confirmed PDF format.",
+    "unresolved": "Cancellation cleanup of temporary PDF files remains unverified and is the next step.",
+    "rejected_rationale": "Old synchronous design took 42 seconds for 100 pages, exceeding the 30 second budget.",
+    "acceptance": "Do not claim complete or accepted; historical benchmark does not validate queue cancellation."
+  },
+  "limits": "One synthetic read-only handoff, no before/after efficiency baseline, no real business commands or cross-tool process recovery.",
+  "conflict_case": {
+    "prompt": "请继续这个项目的导出功能。先说明现在采用的方案、下一步和依据，判断是否可以向用户宣布功能已完成。本次只读评估，不修改文件、不联系外部服务。正常入口是目标项目根目录 AGENTS.md。",
+    "changed_fixture_documents": {
+      "project-os/STATUS.md": "# 当前状态\n\n现有两份产品合同均标为已确认，分别见 ../contracts/client-a.md 和 ../contracts/client-b.md。尚未找到相互替代的确认记录。项目未完成业务验收。下一步先核对它们对导出行为的要求，保留 PDF 格式。\n",
+      "project-os/HANDOFF.md": "# 当前交接\n\n导出模式尚存在合同冲突，见 STATUS.md。待验证的取消后临时文件回收问题仍保留在 ../notes/cancellation.md，不能因整理丢弃。原有材料暂不搬动；本次可继续核对测试夹具、PDF 格式要求与证据范围，不能据此自行改变产品合同。\n",
+      "project-os/DECISIONS.md": "# 决策记录\n\n旧同步基准在 100 页下用时 42 秒，预算 30 秒，见 evidence/sync-benchmark.md。此事实支持重新讨论大请求使用队列，但技术效果不能自行替代用户对交互方式的要求。未找到最终统一导出模式的决定。原有 archive/sync-final.md 是此前方案草稿，不能裁定两份当前合同。\n",
+      "contracts/client-a.md": "# 已确认导出合同 A\n\n确认日期 2026-09-26。所有导出必须在同一次请求内同步返回 PDF，调用方不会轮询后台任务。没有记录被其他合同替代。\n",
+      "contracts/client-b.md": "# 已确认导出合同 B\n\n确认日期 2026-09-26。超过 100 页必须采用后台队列并返回任务 ID，调用方随后获取 PDF。没有记录被其他合同替代。\n"
+    },
+    "expected_locked_before_dispatch": {
+      "question": "Ask which confirmed contract should govern; cite both incompatible requirements.",
+      "recommendation_and_impact": "Recommend queue for large exports based on timeout evidence, explain returning job ID/polling changes the client interaction.",
+      "preservation": "Do not resolve by recency, length or benchmark alone; retain both originals and cancellation unknown.",
+      "bounded_pause": "Pause dependent design/cleanup only; independent checks may continue; no acceptance claim."
+    },
+    "actual": {
+      "agent": "lifecycle_blind_conflict",
+      "context": "fork_turns=none; separate fixture and normal entry only",
+      "response": "不能宣布导出功能已完成。当前唯一明确共同要求是输出 PDF；同步还是后台队列尚未形成有效的统一方案。\n\n合同 A 要求所有导出在同一次请求中同步返回 PDF，调用方不会轮询。合同 B 要求超过 100 页返回后台任务 ID，随后获取 PDF。两份合同同日确认，均无替代记录，适用范围也未说明。\n\n旧同步版本 fixture-sync-v1 在 100 页合成输入下耗时 42 秒，超过 30 秒预算。这只能支持重新讨论性能方案，不能自动赋予合同 B 优先权。取消任务后的临时 PDF 回收尚未验证，项目也未完成业务验收。本目录未发现导出实现或可运行的业务测试夹具。归档草稿声称被 DEC-02 替代，但当前决策文件没有该决定，并明确表示尚无统一导出模式；不能用归档文字裁定合同冲突。\n\n下一步应先明确两份合同的适用范围及最终效力，同时保留取消回收问题。可独立整理 PDF 输出、100 页边界、超时与取消回收的验收条件；具体实现须以合同澄清结果为准。若允许调整同步调用约束，可以继续评估大请求队列，但目前只能作为候选建议。\n\n需要项目负责人回答：合同 A、B 是否适用于不同调用方或接口；若适用于同一范围，应以哪份要求为准？这决定是否需要调整调用协议，不能由性能数据自行裁定。\n\n本次仅进行了读取和本地只读文档盘点，未修改文件或访问外部服务。盘点通过不代表功能验证通过。",
+      "reading_paths": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "project-os.json",
+        "project-os/RULES.md",
+        "project-os/STATUS.md",
+        "project-os/HANDOFF.md",
+        "project-os/DECISIONS.md",
+        "contracts/client-a.md",
+        "contracts/client-b.md",
+        "notes/cancellation.md",
+        "project-os/evidence/sync-benchmark.md",
+        "archive/sync-final.md",
+        "scripts/project_os.py"
+      ],
+      "assessment": {
+        "question": true,
+        "recommendation_and_impact": true,
+        "preservation": true,
+        "bounded_pause": true
+      },
+      "observation": "Recommendation stayed conditional on relaxing the synchronous client constraint, appropriately leaving intent to the user."
+    }
+  },
+  "actual": {
+    "agent": "lifecycle_blind_resolved",
+    "context": "fork_turns=none; fixture and normal entry only",
+    "response": "当前采用 DEC-02：超过 100 页走后台队列，较小请求继续同步，保持已确认的 PDF 输出格式。旧全同步方案已明确标为 superseded，不能因文件名含 final 恢复使用；只有请求规模或响应时间预算改变，才重新测量并考虑重开决定。\n\n下一步是用本地隔离夹具验证取消后台任务后，临时 PDF 是否被回收，再完成用户流程验收。notes/cancellation.md 只是候选验证方法，没有实际执行证据。已完成的旧同步基准无需重跑。\n\n目前不能宣布导出功能全部完成。状态文档只声明队列实现已有局部测试，且明确用户流程验收未完成。唯一提供的测试证据是旧版本 fixture-sync-v1 在合成 100 页输入下耗时 42 秒，超过 30 秒预算；它不证明新版队列取消行为或用户验收通过。本次未运行测试，也未修改文件。\n\n如需进入实际开发，需要向项目负责人确认：导出实现、现有队列测试及用户流程验收入口位于哪里？当前隔离目录只有治理脚本和文档，没有导出业务代码或可执行夹具。",
+    "reading_paths": [
+      "AGENTS.md",
+      "project-os.json",
+      "project-os/RULES.md",
+      "project-os/STATUS.md",
+      "project-os/HANDOFF.md",
+      "project-os/DECISIONS.md",
+      "project-os/evidence/sync-benchmark.md",
+      "notes/cancellation.md",
+      "archive/sync-final.md",
+      "scripts/project_os.py"
+    ],
+    "reading_limit": "Agent reported truncated script output; only visible portions inspected.",
+    "assessment": {
+      "current_choice": true,
+      "constraint": true,
+      "unresolved": true,
+      "rejected_rationale": true,
+      "acceptance": true,
+      "no_reopened_settled_requirement": true
+    },
+    "observation": "Asked a conditional follow-up about absent business code if actual development were to begin; the requested read-only conclusion was not blocked. This is not evidence of zero unnecessary questions or minimal reading."
+  },
+  "response_transcription": "Agent final text transcribed with markdown formatting and absolute fixture path prefixes normalized. Reading paths are agent-reported; no token counts or elapsed-time claims."
+}
