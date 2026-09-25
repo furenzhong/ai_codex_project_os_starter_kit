@@ -43,7 +43,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 SCHEMA_VERSION = 1
 MANIFEST = "project-os.json"
 KIT_ORIGIN = "github.com/furenzhong/awoo-vibe-coding-governance"
@@ -242,18 +242,21 @@ Keep one authoritative source for each fact; link to task evidence instead of
 copying task state into multiple documents. Add detail only when it prevents a
 specific recurring mistake.
 
-At task closure, consolidate only the material touched by that task. Preserve
+Only on an explicit user request for document inventory or cleanup, consolidate
+within the requested scope (all project documents or specified files/topics).
+Preserve
 the current conclusion, constraints, unresolved questions, rejected options
 and their rationale, evidence, and conditions for reopening the decision.
 Keep canonical source paths stable. Working notes and archives are read on
 demand, not preloaded as current instructions. Mark replaced standalone notes
 with lifecycle: superseded and a replacement link in top-of-file front matter;
 update incoming references before moving them. Uncertain or unfinished material
-stays working/candidate. Trigger related-material consolidation when a decision
-is replaced, a phase closes, or conflicting current claims/rediscovered rejected
-options obstruct work. A new session alone does not trigger a repository sweep.
-Use `python scripts/project_os.py inventory --target . --json` at adoption, phase
-closure, or a concrete context conflict for a read-only inventory. Unclassified
+stays working/candidate. Adoption, task closure, replaced decisions, handoffs,
+context conflicts, and new sessions do not start or prompt a cleanup. Normal
+fact maintenance and task-related questions continue as before.
+For an explicitly requested inventory or cleanup, use
+`python scripts/project_os.py inventory --target . --json` as needed; it scans
+the project, but cleanup stays within the requested scope. Unclassified
 and exact duplicate candidates are not deletion lists.
 Investigate uncertainty in existing requirements, decisions, code, and evidence
 first. Ask the user only when the answer changes intent, retention, or authority

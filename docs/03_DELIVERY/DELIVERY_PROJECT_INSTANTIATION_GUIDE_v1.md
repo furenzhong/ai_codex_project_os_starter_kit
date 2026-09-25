@@ -55,7 +55,7 @@ python ../awoo-governance-kit/scripts/project_os.py apply --target . --mapping w
 
 1. 检查源未被业务化，目标原有代码、文件与 remote 未被替换。
 2. 从实际材料补全最小目标、要求、假设和事实来源；没证据的状态标为未知。
-   对开发过程材料按 [文档生命周期](../00_PROJECT_CONTROL/DOCUMENT_LIFECYCLE.md) 运行一次只读 `inventory`，识别与当前任务有关的候选、旧方案及证据；未归类不等于可删除。新建 RULES 已含最小收敛规则；若映射已有 rules，AI 应在该唯一来源补充同等读取和收尾纪律，不复制整套指南。已有文档原位采用，不在首次接入时自动搬动或清空历史。
+   新建 RULES 已含 [文档生命周期](../00_PROJECT_CONTROL/DOCUMENT_LIFECYCLE.md) 的主动唤醒规则；若映射已有 rules，AI 应在该唯一来源补充同等规则，不复制整套指南。接入本身不启动文档盘点或清理。仅当用户明确要求时，才在指定范围内整理，按需使用只读 `inventory`；未归类不等于可删除。已有文档原位采用，不在首次接入时自动搬动或清空历史。
 3. 运行 `python scripts/project_os.py check --target .`，解释错误、提醒与未验证范围。
 4. 按 [治理试验](GOVERNANCE_TRIAL.md) 做一次独立接手。不能把同一上下文复述答案当成新会话验证。
 5. 用简短回执告诉用户能否接续、发现了什么、还没测什么、是否需要其决策。用户不必给模板逐项打分。
