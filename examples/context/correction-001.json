@@ -1,0 +1,13 @@
+{
+  "id": "correction-001",
+  "task_id": "handoff-export",
+  "from_revision": "ctx-001",
+  "to_revision": "ctx-002",
+  "cause": "handoff_omission",
+  "reason": "The coordinator omitted the pre-existing DEC-002 manual-cleanup constraint from ctx-001.",
+  "impact": "Inspect automatic archival in src/export.py. Reuse compatible JSON export work; review archival side effects and field compatibility before acceptance.",
+  "target_session_id": "fictional-worker-01",
+  "delivery": "recorded",
+  "delivery_evidence": [],
+  "adoption_evidence": []
+}

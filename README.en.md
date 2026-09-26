@@ -38,7 +38,8 @@ The AI's operational entry is the [integration guide](docs/03_DELIVERY/DELIVERY_
 | A new conversation reopens settled decisions | Explicit sources for current facts and decisions; read context on demand |
 | Multiple “current status” documents disagree | Maintain each fact once; handoffs and briefs reference it |
 | An AI says “done” without a clear basis | Bind results to a revision, checks, and evidence; record acceptance separately |
-| Work delegated from Codex to Claude Code is difficult to reclaim | Define the baseline, write ownership, session, delivery, and recovery contract |
+| An omitted constraint sends Claude Code's implementation off course | Dispatch snapshots preserve constraint sources, rejected options, assumptions, and acceptance criteria |
+| Compaction or a new conversation loses track of other AI workers | Separate checkpoints for each execution identity; distinguish recorded, delivered, and adopted corrections |
 | Installing a kit replaces the project's identity | Check source and target identities; preserve the target's Git and business content |
 | Documentation grows without visible benefit | Run AI handoff and failure exercises; report outcomes and maintenance effort |
 | Old proposals become current requirements, or cleanup loses open questions | Consolidate conclusions, constraints, rationale, and unresolved work; retrieve history on demand |
@@ -62,7 +63,7 @@ your-project/
     DECISIONS.md              # Significant choices and their rationale
 ```
 
-Task and evidence directories are used when work calls for them. Heavier PRD, API, and risk templates remain optional resources in the kit; **they are not copied into every project**. The AI must populate the initial documents from your actual project. File existence alone does not constitute successful integration.
+Task and evidence directories are used when work calls for them. Tasks spanning conversations or delegated to other executors can retain dispatch snapshots, individual checkpoints, and correction evidence there, without adding a fifth global source or a `MEMORY.md`. Heavier PRD, API, and risk templates remain optional resources in the kit; **they are not copied into every project**. The AI must populate the initial documents from your actual project. File existence alone does not constitute successful integration.
 
 For compatibility with existing installations, `project-os.json`, `project-os/`, and `scripts/project_os.py` retain their names. The brand change does not require migrating project files.
 
@@ -81,11 +82,11 @@ python scripts/project_os.py inventory --target . --json
 
 - `plan` reads the project and lists proposed changes and conflicts. After inspecting it, the AI can `apply` within the user's existing authorization.
 - `apply` creates or appends incrementally. Repeated use preserves user content. Conflicts are reported rather than resolved by replacing the project.
-- `check` checks declared paths, entrypoints, tasks, and evidence consistency. It calls no model, application service, or network endpoint.
+- `check` checks declared paths, entrypoints, tasks, and evidence consistency. For tasks using the context protocol, it also checks snapshot SHA-256 digests, revision references, correction evidence, and the context a receipt declares it adopted. It calls no model, application service, or network endpoint.
 - `snapshot` reports observable state without rewriting project status.
 - `inventory` reads Markdown and related documents and reports entrypoints, working material, evidence, archives, unclassified files, exact duplicate candidates, and lifecycle conflicts. Classification uses declarations and paths, not observed AI reading; unclassified does not mean disposable. It never archives, merges, or deletes files automatically.
 
-Use `--mapping` to adopt existing documents; see the [mapping example](examples/adoption-mapping.json) and [integration guide](docs/03_DELIVERY/DELIVERY_PROJECT_INSTANTIATION_GUIDE_v1.md). Replace example paths with real target paths. First adoption and upgrading an existing installation are different operations: compare changes and preserve project-owned content when upgrading.
+Use `--mapping` to adopt existing documents; see the [mapping example](examples/adoption-mapping.json) and [integration guide](docs/03_DELIVERY/DELIVERY_PROJECT_INSTANTIATION_GUIDE_v1.md). Replace example paths with real target paths. `apply` does not upgrade existing installations: compare and merge the script, rules, and source version while preserving project-owned content. Legacy tasks remain supported, and the context protocol is optional. The report's `context.legacy` identifies tasks not checked against the new protocol; do not fabricate historical records to migrate them.
 
 Research notes, candidate designs, and phase plans should not all enter every AI session. When the user explicitly requests cleanup, follow the [document lifecycle](docs/00_PROJECT_CONTROL/DOCUMENT_LIFECYCLE.md) within the requested scope to consolidate current conclusions while preserving user constraints, rejected options and their rationale, open questions, and evidence before marking replacements or archiving. Judge success by whether a fresh AI finds the current decision and preserves unresolved work, not by the number of deleted files. Deletion is never the default action.
 
@@ -111,7 +112,17 @@ At first adoption and after substantial changes to reading or collaboration beha
 
 The [harness contract](docs/02_TECH/HARNESS_CONTRACT.md) defines tool-independent dispatch and return: goal and baseline → bounded execution → inspectable delivery → acceptance → update the authoritative state.
 
-The current implementation provides contracts, examples, and local receipt checks. **It is not a cross-model orchestrator.** A project chooses its executors, models, and CLI adapters. Separate worktrees do not isolate databases, ports, or external accounts. After interruption, inspect the existing task and session before resuming to avoid repeating effects that already occurred.
+Suppose you told Codex, "Document cleanup starts only when I request it," but it sends Claude Code only a plan to "complete document governance." Claude might add automatic cleanup while following that plan. The missing input is the decision and its rationale reaching the executor along with the task.
+
+The [task context protocol](docs/02_TECH/TASK_CONTEXT.md) adds three things for such tasks:
+
+- **Retain the context dispatched.** Versioned snapshots record the goal, constraints and their sources, rejected options and reasons, assumptions, non-goals, and acceptance criteria, so the coordinator can compare them with the revision the executor actually adopted when work returns.
+- **Preserve each participant's recovery state.** The coordinator and executors keep separate checkpoints for actions actually completed, results, unresolved issues, ongoing operations, and the next step. A new conversation checks these clues against the actual environment before resuming.
+- **Check whether a correction was adopted.** Editing a shared file only records it. A resumable session needs targeted delivery and adoption evidence. When a one-shot invocation cannot receive an update, keep the correction pending and inspect the affected scope of its old-context output when it returns. Do not accept it before reconciliation.
+
+Maintain these records at necessary points such as dispatch, consequential choices, corrections, and handoff, as part of the authorized task. They require no per-turn summaries and do not start document cleanup, scheduled jobs, or extra approval rounds. Tasks with meaningful design choices should expose a key choice or a small representative result early, so misunderstandings can be found; mechanical edits need no confirmation ceremony.
+
+The current implementation provides contracts, examples, and local receipt checks. **It is not a cross-model orchestrator.** It does not read tools' internal compaction summaries, include a pre-compaction hook, or guarantee lossless memory. Markdown cannot pause an active executor or prove it understood a requirement. A project chooses its executors, models, and CLI adapters. Separate worktrees do not isolate databases, ports, or external accounts. After interruption, inspect the existing task, exact session, and ongoing operations before resuming to avoid repeating effects that already occurred.
 
 ## Reading and contributing
 

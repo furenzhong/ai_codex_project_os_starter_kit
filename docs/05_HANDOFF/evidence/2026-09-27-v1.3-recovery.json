@@ -1,0 +1,86 @@
+{
+  "scope": "Independent agent given only isolated project path, normal AGENTS entry, and continue-current-task request; no parent conversation.",
+  "criteria_locked_before_dispatch": [
+    "Find manual cleanup constraint DEC-002 through normal sources",
+    "Inspect existing candidate/session instead of duplicate dispatch",
+    "Keep correction recorded, not delivered/adopted without evidence",
+    "Do not accept ctx-001 result against ctx-002",
+    "Identify automatic Path.mkdir/glob/rename behavior as affected; reuse JSON export",
+    "Keep extra-field compatibility unverified",
+    "Do not run inventory, clean/archive docs, or prompt cleanup",
+    "Runtime remains unknown if fixture cannot query it; continue independent review"
+  ],
+  "original_baseline": "65a73ab611b1f5e420d5c59e1d40ad963508379c",
+  "original_candidate": "7999162da3fcb9340d644f85b1fd39ce1189bf68",
+  "fixture_sources": {
+    "baseline": "import json\n\ndef export_status(status, notes_dir):\n    return json.dumps(status, ensure_ascii=False)\n",
+    "candidate": "import json\nfrom pathlib import Path\n\ndef export_status(status, notes_dir):\n    archive = Path(notes_dir) / 'archive'\n    archive.mkdir(exist_ok=True)\n    for note in Path(notes_dir).glob('*.md'):\n        note.rename(archive / note.name)\n    return json.dumps(status, ensure_ascii=False, indent=2)\n"
+  },
+  "observations": {
+    "task_status": "submitted",
+    "correction_delivery": "recorded",
+    "original_source_unchanged": true
+  },
+  "review": "# handoff-export 本地恢复核查\n\n本次执行标识为 `<independent recovery reviewer>`，采用实际读取并核对摘要的 `ctx-002`。原候选不能验收。本次完成了可独立推进的本地复核与修正补丁验证，没有将补丁应用到原执行工作文件。\n\n## 结论与依据\n\n- `DEC-002` 是原本存在、在 `ctx-001` 中遗漏的人工清理约束，不是本次新增需求；`correction-001` 的原因 `handoff_omission` 与来源一致。`HANDOFF.md` 的旧助手摘要不能覆盖此约束。\n- 本地 Git 根与 common dir 都位于本隔离目录，HEAD 为 `7999162da3fcb9340d644f85b1fd39ce1189bf68`。基线 `65a73ab611b1f5e420d5c59e1d40ad963508379c` 与候选对象均存在。原工作文件与候选一致。\n- 实际提交差异在 `src/export.py`：增加了 `Path`、创建 `archive`、移动顶层 `*.md`，并给 `json.dumps` 增加 `indent=2`。临时样例复现了归档行为，因此问题不是仅凭摘要推测。\n- 候选和基线都直接序列化传入的 `status`，没有新增输出字段。本目录与基线树没有实际消费者；不能据此声称消费者容忍额外字段，也没有添加额外字段。\n- `receipt.json`、`executor.json` 均属于 `fictional-worker-01` 的 `ctx-001`。旧语法检查证据只覆盖语法，不证明兼容性或无归档副作用。\n- `runtime-observation.json` 明确声明没有实时执行后端，当前进程状态仍为 `unknown`。收到候选提交不证明执行已经停止。材料中的观察时间是合成场景时间，本次系统时间不用于推断旧执行的新旧或停止状态。\n- `correction-001` 保持 `recorded`；没有向旧执行发送更正，也没有其采纳证据。本次审阅者读取 `ctx-002` 只证明本次审阅者取得该版本。\n\n## 已完成的可审查结果\n\n`recovery-proposal.patch` 仅移除自动归档相关代码，保留函数调用参数、Unicode JSON 和候选的两空格缩进。它仍是待协调应用的补丁，`src/export.py` 没有改变。\n\n运行 `python project-os/evidence/verify-recovery-proposal.py` 成功。该脚本在本目录下创建并销毁本次专属临时样例，核对函数签名、三个 JSON 样例的解析结果、输入不变、文件内容与目录树不变、缺失 notes 目录不被创建，并对候选与修正版的隔离副本运行 `python -m py_compile src/export.py`。详见 `recovery-behavior-check.json`，包含一份代表性输出。临时样例已由脚本清除；没有执行项目文档盘点、合并、归档或删除。\n\n这些检查仅证明已测试输入上的本地行为。缩进会改变相对于基线的输出空白；实际消费者是否依赖精确输出字符串仍未核实，解析 JSON 的样例比较不能替代集成核验。\n\n`git apply --check project-os/evidence/recovery-proposal.patch` 返回 0；`git diff --exit-code HEAD -- src/export.py` 返回 0，确认补丁可应用且原工作源码未变。`python scripts/project_os.py check --target . --json` 返回 0，报告 `ok: true`、`accepted: 0`，保留未知操作、旧 checkpoint、待采纳更正和旧回执警告，详见 `recovery-structure-check.json`。结构通过不代表产品验收。\n\n## 下一步与验收边界\n\n1. 恢复到有真实执行后端的环境后，查询 `session:fictional-worker-01` 的实际状态，再决定原会话纠正或重新派发；当前材料不足以作出已停止判断，本次也未操作外部会话。\n2. 按具体执行身份保存 `ctx-002` 的送达、采纳或后续处置证据，保留旧快照与旧回执；不要把本次 checkpoint 当成旧会话的采纳记录。\n3. 在可安全写入的工作副本应用已验证补丁。检查实际消费者或既有契约对缩进的要求，复核真实差异和代表性输出，生成当前上下文的结果与验收证据后才能关闭任务。\n\n当前任务生命周期仍在 `project-os/tasks/handoff-export.json`，保持 `submitted`，不标记 `accepted`。本次 checkpoint 为 `project-os/tasks/handoff-export/recovery-reviewer.json`。\n\n## 实际读取依据\n\n- `AGENTS.md`\n- `project-os.json`\n- `project-os/RULES.md`\n- `project-os/STATUS.md`\n- `project-os/HANDOFF.md`\n- `project-os/DECISIONS.md`\n- `project-os/tasks/handoff-export.json`\n- `project-os/tasks/handoff-export/context-001.md` 与 `context-002.md`，SHA-256 均与任务记录一致\n- `project-os/tasks/handoff-export/coordinator.json`\n- `project-os/tasks/handoff-export/executor.json`\n- `project-os/tasks/handoff-export/correction-001.json`\n- `project-os/tasks/handoff-export/receipt.json`\n- `project-os/evidence/runtime-observation.json`\n- `project-os/evidence/syntax-check.txt`\n- `src/export.py`，以及上述本地基线、候选的该文件 Git 对象与两者差异\n- `scripts/project_os.py` 的说明、检查器合同与 CLI 相关代码；结构检查还读取同目录 `CLAUDE.md` 入口\n\n只搜索了隔离目录内文件和源码引用；未读取目录外材料，未访问外部服务，未 commit/push。\n",
+  "patch": "--- a/src/export.py\n+++ b/src/export.py\n@@ -1,9 +1,4 @@\n import json\n-from pathlib import Path\n \n def export_status(status, notes_dir):\n-    archive = Path(notes_dir) / 'archive'\n-    archive.mkdir(exist_ok=True)\n-    for note in Path(notes_dir).glob('*.md'):\n-        note.rename(archive / note.name)\n     return json.dumps(status, ensure_ascii=False, indent=2)\n",
+  "behavior_check": {
+    "task_id": "handoff-export",
+    "observed_at": "2026-09-27T01:35:16+08:00",
+    "reviewer_identity": "<independent recovery reviewer>",
+    "context_revision": "ctx-002",
+    "base_revision": "65a73ab611b1f5e420d5c59e1d40ad963508379c",
+    "candidate_revision": "7999162da3fcb9340d644f85b1fd39ce1189bf68",
+    "candidate_source_sha256": "fbb007b4e450d6cfeb5dc92a534ef7cd188b193525248d72a16ee33edf438973",
+    "proposal_source_sha256": "f9b468e5b4e78b7360b4140d9e6c784808647e9372c3a72025a53538476c6767",
+    "proposal_applied": false,
+    "checks": [
+      {
+        "name": "old_candidate_archival_reproduced_on_disposable_fixture",
+        "pass": true
+      },
+      {
+        "name": "baseline_call_signature_preserved",
+        "pass": true
+      },
+      {
+        "name": "three_payloads_preserve_parsed_json_without_added_fields",
+        "pass": true
+      },
+      {
+        "name": "unicode_and_representative_input_preserved",
+        "pass": true
+      },
+      {
+        "name": "existing_file_paths_contents_and_directories_unchanged",
+        "pass": true
+      },
+      {
+        "name": "nonexistent_notes_directory_remains_nonexistent",
+        "pass": true
+      },
+      {
+        "name": "candidate_syntax",
+        "command": "python -m py_compile src/export.py",
+        "scope": "isolated temporary copy",
+        "exit_code": 0,
+        "pass": true
+      },
+      {
+        "name": "proposal_syntax",
+        "command": "python -m py_compile src/export.py",
+        "scope": "isolated temporary copy",
+        "exit_code": 0,
+        "pass": true
+      }
+    ],
+    "representative_output": "{\n  \"task\": \"handoff-export\",\n  \"status\": \"未完成\",\n  \"next\": [\n    \"复核输出\"\n  ],\n  \"detail\": {\n    \"count\": 0,\n    \"ready\": false,\n    \"owner\": null\n  }\n}",
+    "limits": [
+      "No real consumer is present in this fixture; parsed JSON equivalence is not a real consumer integration test.",
+      "Proposal retains candidate indent=2; exact output whitespace differs from the baseline.",
+      "Original execution remains unknown; no live backend was accessed or is supplied by the fixture.",
+      "No evidence of ctx-002 delivery/adoption by fictional-worker-01 was created.",
+      "The current src/export.py is still the unaccepted old candidate; this report does not accept the task."
+    ]
+  },
+  "limits": "Synthetic runtime with no live backend; no actual native compaction, stopping/resuming of a worker, or long-term outcomes tested."
+}

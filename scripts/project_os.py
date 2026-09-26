@@ -31,6 +31,7 @@ changes remotes, commits changes, or contacts an agent service.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import hashlib
 import json
 import os
@@ -43,7 +44,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 
-VERSION = "1.2.1"
+VERSION = "1.3.0"
 SCHEMA_VERSION = 1
 MANIFEST = "project-os.json"
 KIT_ORIGIN = "github.com/furenzhong/awoo-vibe-coding-governance"
@@ -56,7 +57,10 @@ END = b"<!-- project-os:end -->"
 TASK_STATUSES = {"planned", "running", "submitted", "accepted", "returned", "blocked"}
 LIMITS = (
     "Checks validate local structure, Git object references, declared results, and evidence paths. "
-    "They do not execute acceptance commands, establish reviewer identity, or prove product correctness."
+    "Opted-in task context checks compare snapshot hashes, declared revisions, checkpoints, and correction evidence. "
+    "Legacy tasks have no context coverage. Hashes are editable consistency records, not tamper-proof attestations. "
+    "Checks do not execute commands, contact or stop agents, establish identity or understanding, "
+    "verify live process state, or prove evidence claims and product correctness."
 )
 INVENTORY_EXTENSIONS = {".md", ".markdown", ".txt", ".rst"}
 INVENTORY_SKIP_DIRS = {
@@ -268,6 +272,43 @@ Routine reversible organization within authorization does not need reapproval.
 Delete only within existing user/project authorization after checking unique
 content, references, active tasks, and retention needs; age alone is insufficient.
 
+## 跨会话任务 / Cross-session tasks
+
+For delegated or recoverable work, keep the existing task record as the sole
+lifecycle source. Retain a versioned dispatch snapshot of the goal, constraints
+and accessible sources, rejected choices and reasons, assumptions, non-goals,
+and acceptance basis. Confirm the executor can access the actual version in its
+own workspace; a link to uncommitted files elsewhere is not delivery. For a
+consequential interpretation, inspect an early key choice or representative
+result. Routine implementation needs no added approval ceremony.
+
+Each active execution identity, including the coordinator, owns a separate task
+checkpoint. Save meaningful changes, corrections and handoffs: last observed
+action and evidence, unresolved assumptions, ongoing operations and locators,
+next action, and adopted context version. Do not save every message or depend
+on a pre-compaction hook. Keep project HANDOFF as navigation to these records.
+Recheck current authority, revisions, pending corrections, actual Git and runtime
+state before resuming or redispatching. Last observed running is not live truth;
+unknown does not mean stopped. Query external operations before retrying them.
+
+Corrections are recorded, delivered, then adopted, with evidence tied to the
+specific session. Editing a shared file does not establish delivery or adoption.
+Keep old dispatch snapshots; advance the revision for changed requirements.
+Reconcile stale results and affected work before acceptance. A one-shot worker
+may only receive corrections on return; documents cannot stop its active writes.
+Separate user decisions, observed facts, and assumptions; revisit original
+sources instead of repeatedly compressing old summaries into new authority.
+Ask only about substantive intent/authority that available evidence cannot
+resolve; preserve disputed material and continue independent authorized work.
+These task records are normal fact maintenance, not a request for document
+inventory, consolidation, archive, or deletion. No lossless memory is promised.
+
+For machine checking, use the optional task.context contract and examples:
+https://github.com/furenzhong/awoo-vibe-coding-governance/blob/main/docs/02_TECH/TASK_CONTEXT.md
+https://github.com/furenzhong/awoo-vibe-coding-governance/tree/main/examples/context
+Use the kit revision recorded in project-os.json when comparing versions.
+Existing tasks remain valid without this extension; the report shows the gap.
+
 ## 当前约束 / Current constraints
 
 - Not yet recorded. The project owner or agent must reconcile these rules with
@@ -306,6 +347,9 @@ behavior have not been inspected or validated by this installer.
 - No execution sessions have been recorded by this installer. Before resuming
   an interrupted delegated task, inspect its executor, worktree, and session.
   Silence or a timeout does not establish that its previous writer has stopped.
+  Link each active task's coordinator/executor checkpoint and current context
+  revision here; do not copy their lifecycle or let all actors overwrite a
+  shared summary. Reconcile pending corrections and actual runtime on recovery.
 """,
         "decisions": """# 项目决策 / Project decisions
 
@@ -474,6 +518,229 @@ def apply_plan(target: Path, operations: list[dict[str, Any]]) -> None:
                     stream.write(op["after"][len(op["before"]):])
 
 
+def context_path(root: Path, relative: Any) -> Path:
+    """Read context only inside the project, excluding links/reparse points on 3.10+."""
+    if isinstance(relative, str) and "\x00" in relative:
+        raise ProjectOSError("Context path contains invalid characters.")
+    try:
+        path = safe_path(root, relative)
+    except ValueError as exc:
+        raise ProjectOSError("Context path contains invalid characters.") from exc
+    cursor = root.resolve()
+    for part in path.relative_to(cursor).parts:
+        cursor = cursor / part
+        try:
+            info = cursor.lstat()
+        except FileNotFoundError:
+            continue
+        if stat.S_ISLNK(info.st_mode) or (
+            getattr(info, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+        ):
+            raise ProjectOSError(f"Context paths must not use links or reparse points: {relative}")
+    if not path.is_file() or not stat.S_ISREG(path.lstat().st_mode) or path.stat().st_size == 0:
+        raise ProjectOSError(f"Context/evidence must name an existing, nonempty regular file: {relative}")
+    return path
+
+
+def context_snapshot_sha256(path: Path) -> str:
+    """Hash UTF-8 snapshot text with CRLF normalized to LF; keep all other bytes."""
+    try:
+        content = path.read_bytes().decode("utf-8")
+    except UnicodeError as exc:
+        raise ProjectOSError("Context snapshot must contain UTF-8 text.") from exc
+    if not content.strip():
+        raise ProjectOSError("Context snapshot must contain nonempty text.")
+    return hashlib.sha256(content.replace("\r\n", "\n").encode("utf-8")).hexdigest()
+
+
+def check_task_context(root: Path, task: dict[str, Any], relative: str) -> dict[str, Any]:
+    """Validate opted-in context records, without running or contacting executors."""
+    result: dict[str, Any] = {"tracked": "context" in task, "errors": [], "warnings": []}
+    if not result["tracked"]:
+        return result
+
+    def issue(code: str, message: str, path: str = relative, warning: bool = False) -> None:
+        result["warnings" if warning else "errors"].append({"code": code, "path": path, "message": message})
+
+    def nonempty(value: Any, label: str) -> str:
+        if not isinstance(value, str) or not value.strip():
+            raise ProjectOSError(f"{label} must be a nonempty string.")
+        return value
+
+    def array(value: Any, label: str) -> list[Any]:
+        if not isinstance(value, list):
+            raise ProjectOSError(f"{label} must be an array.")
+        return value
+
+    def enum(value: Any, choices: set[str], label: str) -> str:
+        value = nonempty(value, label)
+        if value not in choices:
+            raise ProjectOSError(f"Unknown {label}: {value}.")
+        return value
+
+    def evidence(value: Any, label: str, required: bool = False, forbidden: set[Path] | None = None) -> None:
+        refs = array(value, label)
+        if required and not refs:
+            raise ProjectOSError(f"{label} requires nonempty evidence.")
+        for ref in refs:
+            path = context_path(root, ref)
+            if forbidden and any(path == other or path.samefile(other) for other in forbidden):
+                raise ProjectOSError(f"{label} must reference preserved evidence, not a mutable active checkpoint.")
+
+    paths: set[Path] = set()
+
+    def record_path(ref: Any) -> Path:
+        path = context_path(root, ref)
+        if any(path == other or path.samefile(other) for other in paths):
+            raise ProjectOSError(f"Context record paths must identify unique files, including hardlink aliases: {ref}")
+        paths.add(path)
+        return path
+
+    try:
+        context = task["context"]
+        if not isinstance(context, dict):
+            raise ProjectOSError("Task context must be an object.")
+        if type(context.get("schema_version")) is not int or context["schema_version"] != 1:
+            raise ProjectOSError("Unsupported context.schema_version; expected integer 1.")
+        current = nonempty(context.get("current_revision"), "context.current_revision")
+        snapshots = array(context.get("snapshots"), "context.snapshots")
+        checkpoint_refs = array(context.get("checkpoints"), "context.checkpoints")
+        correction_refs = array(context.get("corrections"), "context.corrections")
+        if not snapshots:
+            raise ProjectOSError("context.snapshots must not be empty.")
+    except ProjectOSError as exc:
+        issue("context_schema", str(exc))
+        return result
+
+    revisions: dict[str, int] = {}
+    for index, snapshot_record in enumerate(snapshots):
+        try:
+            if not isinstance(snapshot_record, dict):
+                raise ProjectOSError("Each context snapshot must be an object.")
+            rev = nonempty(snapshot_record.get("revision"), "Snapshot revision")
+            if rev in revisions:
+                raise ProjectOSError(f"Duplicate context revision: {rev}")
+            revisions[rev] = index
+            digest = snapshot_record.get("sha256")
+            if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", digest):
+                raise ProjectOSError("Snapshot sha256 must contain 64 hexadecimal characters.")
+            path = record_path(snapshot_record.get("path"))
+            if context_snapshot_sha256(path) != digest.lower():
+                raise ProjectOSError(f"Context snapshot hash mismatch: {snapshot_record['path']}")
+        except (ProjectOSError, OSError) as exc:
+            issue("context_snapshot", str(exc))
+    if revisions.get(current) != len(snapshots) - 1:
+        issue("context_revision", "current_revision must identify the last snapshot in the ordered snapshots array.")
+
+    checkpoints: dict[Path, dict[str, Any]] = {}
+    checkpoint_paths: set[Path] = set()
+    checkpoint_sessions: set[tuple[str, str]] = set()
+    for ref in checkpoint_refs:
+        try:
+            path = record_path(ref)
+            checkpoint_paths.add(path)
+            checkpoint = read_json(path)
+            if checkpoint.get("task_id") != task["id"]:
+                raise ProjectOSError("Checkpoint task_id does not match its task.")
+            for field in ("actor", "session_id", "context_revision", "last_action", "next_action"):
+                nonempty(checkpoint.get(field), f"Checkpoint {field}")
+            role = enum(checkpoint.get("role"), {"coordinator", "executor"}, "checkpoint role")
+            key = (role, checkpoint["session_id"])
+            if key in checkpoint_sessions:
+                raise ProjectOSError("Only one active checkpoint per role/session_id is allowed.")
+            checkpoint_sessions.add(key)
+            observed = nonempty(checkpoint.get("observed_at"), "Checkpoint observed_at")
+            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})", observed):
+                raise ProjectOSError("Checkpoint observed_at must be ISO 8601 with seconds and a timezone.")
+            try:
+                datetime.fromisoformat(observed.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise ProjectOSError("Checkpoint observed_at is not a valid timestamp.") from exc
+            rev = checkpoint["context_revision"]
+            if rev not in revisions:
+                raise ProjectOSError("Checkpoint refers to an unknown context revision.")
+            for item in array(checkpoint.get("unresolved"), "Checkpoint unresolved"):
+                nonempty(item, "Checkpoint unresolved item")
+            operations = array(checkpoint.get("operations"), "Checkpoint operations")
+            for operation in operations:
+                if not isinstance(operation, dict):
+                    raise ProjectOSError("Each checkpoint operation must be an object.")
+                nonempty(operation.get("description"), "Operation description")
+                nonempty(operation.get("locator"), "Operation locator")
+                state = enum(operation.get("state"), {"running", "completed", "unknown"}, "operation state")
+                if state in {"running", "unknown"}:
+                    issue("context_operation", "Recorded operation may still be active; inspect its actual locator before resuming or redispatching. No process state was verified.", ref, True)
+            evidence(checkpoint.get("evidence"), "Checkpoint evidence")
+            checkpoints[path] = checkpoint
+            if rev != current:
+                issue("context_stale_checkpoint", "Checkpoint uses an older context revision; it does not cover the current execution state.", ref, True)
+        except (ProjectOSError, OSError) as exc:
+            issue("context_checkpoint", str(exc), str(ref))
+    if task.get("status") == "running" and not any(
+        cp["role"] == "executor" and cp["session_id"] == task.get("session_id") and cp["context_revision"] == current
+        for cp in checkpoints.values()
+    ):
+        issue("context_missing_checkpoint", "Running task has no current executor checkpoint for its session; inspect the writer before redispatching.", warning=True)
+    if task.get("status") in {"running", "submitted", "accepted"} and not any(
+        cp["role"] == "coordinator" for cp in checkpoints.values()
+    ):
+        issue("context_missing_coordinator", "Task has no coordinator checkpoint; preserve the coordinator's review and continuation state. Presence does not identify the currently active coordinator.", warning=True)
+
+    correction_ids: set[str] = set()
+    covered_revisions: set[str] = set()
+    for ref in correction_refs:
+        try:
+            correction = read_json(record_path(ref))
+            if correction.get("task_id") != task["id"]:
+                raise ProjectOSError("Correction task_id does not match its task.")
+            for field in ("id", "from_revision", "to_revision", "reason", "impact", "target_session_id"):
+                nonempty(correction.get(field), f"Correction {field}")
+            if correction["id"] in correction_ids:
+                raise ProjectOSError("Correction id must be unique within the task.")
+            correction_ids.add(correction["id"])
+            enum(correction.get("cause"), {"handoff_omission", "execution_deviation", "requirement_change", "acceptance_gap"}, "correction cause")
+            before, after = correction["from_revision"], correction["to_revision"]
+            if before not in revisions or after not in revisions or revisions[before] >= revisions[after]:
+                raise ProjectOSError("Correction revisions must be known and ordered from an earlier to a later snapshot.")
+            delivery = enum(correction.get("delivery"), {"recorded", "delivered", "adopted"}, "correction delivery")
+            evidence(correction.get("delivery_evidence"), "Correction delivery_evidence", delivery in {"delivered", "adopted"})
+            evidence(correction.get("adoption_evidence"), "Correction adoption_evidence", delivery == "adopted", checkpoint_paths)
+            covered_revisions.add(after)
+            if delivery != "adopted":
+                current_session = correction["target_session_id"] == task.get("session_id")
+                issue("context_pending_correction", "Correction adoption is not recorded for its target session; changing a file does not deliver or apply it.", ref,
+                      warning=not (current_session and task.get("status") == "accepted"))
+        except (ProjectOSError, OSError) as exc:
+            issue("context_correction", str(exc), str(ref))
+    for rev, index in revisions.items():
+        if index and rev not in covered_revisions:
+            issue("context_missing_correction", f"Later snapshot {rev} requires a correction record describing its change.")
+
+    receipt_ref = task.get("receipt")
+    if not receipt_ref and task.get("status") in {"submitted", "accepted"}:
+        issue("context_receipt", "Submitted or accepted context task requires a receipt with its revision and executor checkpoint.")
+    if receipt_ref:
+        try:
+            receipt = read_json(context_path(root, receipt_ref))
+            receipt_rev = nonempty(receipt.get("context_revision"), "Receipt context_revision")
+            if receipt_rev not in revisions:
+                raise ProjectOSError("Receipt refers to an unknown context revision.")
+            receipt_checkpoint = context_path(root, receipt.get("checkpoint"))
+            checkpoint = checkpoints.get(receipt_checkpoint)
+            if checkpoint is None:
+                raise ProjectOSError("Receipt checkpoint must name a valid active context.checkpoints entry.")
+            session_id = nonempty(task.get("session_id"), "Task session_id for context receipt")
+            if checkpoint["role"] != "executor" or checkpoint["session_id"] != session_id:
+                raise ProjectOSError("Receipt checkpoint must belong to this task's current executor session.")
+            if checkpoint["context_revision"] != receipt_rev:
+                raise ProjectOSError("Receipt and checkpoint context revisions must match.")
+            if receipt_rev != current:
+                issue("context_stale_receipt", "Receipt was produced against an older context revision; inspect affected work before acceptance.", str(receipt_ref), task.get("status") != "accepted")
+        except (ProjectOSError, OSError) as exc:
+            issue("context_receipt", str(exc), str(receipt_ref))
+    return result
+
+
 def check_project(root: Path) -> dict[str, Any]:
     root = root.resolve()
     errors: list[dict[str, str]] = []
@@ -482,7 +749,7 @@ def check_project(root: Path) -> dict[str, Any]:
     def issue(code: str, message: str, path: str = "", warning: bool = False) -> None:
         (warnings if warning else errors).append({"code": code, "path": path, "message": message})
 
-    report: dict[str, Any] = {"command": "check", "ok": False, "target": str(root), "errors": errors, "warnings": warnings, "harness": {"tasks": 0, "accepted": 0, "state": "not_exercised"}, "limits": LIMITS}
+    report: dict[str, Any] = {"command": "check", "ok": False, "target": str(root), "errors": errors, "warnings": warnings, "harness": {"tasks": 0, "accepted": 0, "state": "not_exercised"}, "context": {"tracked": 0, "legacy": 0, "state": "not_exercised"}, "limits": LIMITS}
     try:
         data = read_json(safe_path(root, MANIFEST))
         manifest_shape(root, data)
@@ -572,6 +839,10 @@ def check_project(root: Path) -> dict[str, Any]:
             seen.add(task["id"])
             if task["status"] not in TASK_STATUSES:
                 raise ProjectOSError("Unknown task status.")
+            context_report = check_task_context(root, task, relative)
+            report["context"]["tracked" if context_report["tracked"] else "legacy"] += 1
+            errors.extend(context_report["errors"])
+            warnings.extend(context_report["warnings"])
             for field in ("writable_paths", "acceptance_commands"):
                 if not isinstance(task.get(field), list) or not task[field] or not all(isinstance(x, str) and x.strip() for x in task[field]):
                     raise ProjectOSError(f"Task requires a nonempty {field} list.")
@@ -588,7 +859,7 @@ def check_project(root: Path) -> dict[str, Any]:
                 if task["status"] in {"submitted", "accepted"}:
                     raise ProjectOSError("Submitted or accepted task requires a receipt path.")
                 continue
-            receipt_path = safe_path(root, receipt_ref)
+            receipt_path = context_path(root, receipt_ref) if "context" in task else safe_path(root, receipt_ref)
             receipt = read_json(receipt_path)
             if receipt.get("task_id") != task["id"]:
                 raise ProjectOSError("Receipt task_id does not match the task.")
@@ -644,6 +915,10 @@ def check_project(root: Path) -> dict[str, Any]:
             issue("task", str(exc), relative)
     if task_files:
         report["harness"]["state"] = "records_invalid" if errors else ("accepted_records_checked" if report["harness"]["accepted"] else "records_checked_no_acceptance")
+    if report["context"]["tracked"]:
+        report["context"]["state"] = "records_invalid" if any(item["code"].startswith("context_") for item in errors) else ("partially_covered" if report["context"]["legacy"] else "tracked_records_checked")
+    elif report["context"]["legacy"]:
+        report["context"]["state"] = "legacy_only"
     report["ok"] = not errors
     return report
 
@@ -882,6 +1157,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  {kind[:-1]}: {item.get('path', '')} {item['message']}")
         if "harness" in report:
             print(f"Harness: {report['harness']['state']}")
+            print(f"Context: {report['context']['state']}; tracked={report['context']['tracked']}; legacy={report['context']['legacy']}")
         print(report.get("limits", LIMITS))
     return 0 if report["ok"] else 1
 

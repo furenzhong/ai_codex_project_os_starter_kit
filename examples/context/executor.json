@@ -1,0 +1,13 @@
+{
+  "task_id": "handoff-export",
+  "actor": "fictional worker",
+  "role": "executor",
+  "session_id": "fictional-worker-01",
+  "context_revision": "ctx-001",
+  "observed_at": "2026-09-27T10:06:00+08:00",
+  "last_action": "Returned a candidate JSON export with an automatic archival step; this example supplies no executed checks.",
+  "next_action": "Await coordinator review.",
+  "unresolved": ["Consumer tolerance for extra fields remains unverified."],
+  "operations": [],
+  "evidence": []
+}

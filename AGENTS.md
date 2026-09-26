@@ -9,6 +9,7 @@ This is the reusable governance **source kit**, not a business project. It helps
 - Governance rules: `docs/00_PROJECT_CONTROL/DOCUMENT_GOVERNANCE_SYSTEM.md`.
 - Applying this kit elsewhere: `docs/03_DELIVERY/DELIVERY_PROJECT_INSTANTIATION_GUIDE_v1.md`.
 - Delegating work: `docs/02_TECH/HARNESS_CONTRACT.md`.
+- Task context, corrections, and recovery: `docs/02_TECH/TASK_CONTEXT.md`.
 - Testing whether governance helps: `docs/03_DELIVERY/GOVERNANCE_TRIAL.md`.
 - Structure and document ownership: `docs/00_PROJECT_CONTROL/PROJECT_STRUCTURE_AND_NAMING_SPEC.md` and `DOCUMENT_CATALOG.md` in that directory.
 - Document lifecycle and context reduction: `docs/00_PROJECT_CONTROL/DOCUMENT_LIFECYCLE.md`.
@@ -37,6 +38,10 @@ Document cleanup starts only on an explicit user request, such as "Use document 
 - Define the desired behavior and acceptance basis before implementation. Use relevant tests; do not invent tests that only restate a document edit.
 - Delegate independent tasks when useful. Assign write ownership and a baseline; collect an identifiable result and verification evidence before accepting it. An isolated worktree does not isolate databases, ports, processes or external accounts.
 - Recover an interrupted task by inspecting its recorded session, files and external operation IDs before redispatching. Carry forward the user's existing authorization and constraints.
+- For cross-session or delegated work, retain a versioned dispatch snapshot with relevant constraints and their sources, rejected choices and reasons, assumptions, and acceptance basis. Confirm that the actual executor can access that version. Test a consequential interpretation through an early key choice or representative result; routine edits need no extra approval.
+- Each active coordinator/executor maintains its own task checkpoint: observed actions and evidence, unresolved questions, operations and locators, next action, and adopted context revision. Update on meaningful changes or handoffs, not every message. Handoff links these records; it does not become a shared writable memory dump.
+- A correction being recorded, delivered, and adopted are separate facts. Retain delivery/adoption evidence tied to the target session; editing a shared file proves neither. Reconcile stale deliveries and affected work before acceptance. One-shot workers may receive changes only on return; documents cannot interrupt active writers.
+- Checkpoints describe the last observation, not live runtime truth. Recheck current authority, task revisions, pending corrections, Git and operations when resuming. Preserve user constraints and distinguish observations from assumptions; do not summarize summaries into new authority. No access to internal compaction or lossless recovery is assumed. This task record maintenance does not initiate document cleanup.
 - Keep model choices and tool-specific invocation details outside durable product rules. Shared instructions have one canonical source; `CLAUDE.md` is an import entry.
 
 ## Change and validation discipline

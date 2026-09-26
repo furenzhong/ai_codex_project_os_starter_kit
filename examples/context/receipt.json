@@ -1,0 +1,10 @@
+{
+  "task_id": "handoff-export",
+  "base_revision": "0000000000000000000000000000000000000000",
+  "result_revision": "1111111111111111111111111111111111111111",
+  "changed_files": ["src/export.py"],
+  "checks": [{"command": "python -m py_compile src/export.py", "exit_code": 1, "evidence": "project-os/tasks/handoff-export/check-example.txt"}],
+  "evidence": [],
+  "context_revision": "ctx-001",
+  "checkpoint": "project-os/tasks/handoff-export/executor.json"
+}

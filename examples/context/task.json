@@ -1,0 +1,22 @@
+{
+  "id": "handoff-export",
+  "objective": "Export unfinished work as compatible JSON without cleanup side effects.",
+  "base_revision": "0000000000000000000000000000000000000000",
+  "writable_paths": ["src/export.py"],
+  "acceptance_commands": ["python -m py_compile src/export.py"],
+  "status": "submitted",
+  "executor": "project-selected-worker",
+  "worktree": "../handoff-worker",
+  "session_id": "fictional-worker-01",
+  "receipt": "project-os/tasks/handoff-export/receipt.json",
+  "context": {
+    "schema_version": 1,
+    "current_revision": "ctx-002",
+    "snapshots": [
+      {"revision": "ctx-001", "path": "project-os/tasks/handoff-export/context-001.md", "sha256": "2799c567ee140f1db3a863782a1dbfca9ba2777d4564490781b3cf27704292ea"},
+      {"revision": "ctx-002", "path": "project-os/tasks/handoff-export/context-002.md", "sha256": "0ba6722b256ff2a95bb5160fe9353179e15442bdf36427767afaf87a41cec337"}
+    ],
+    "checkpoints": ["project-os/tasks/handoff-export/coordinator.json", "project-os/tasks/handoff-export/executor.json"],
+    "corrections": ["project-os/tasks/handoff-export/correction-001.json"]
+  }
+}

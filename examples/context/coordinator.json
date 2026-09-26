@@ -1,0 +1,13 @@
+{
+  "task_id": "handoff-export",
+  "actor": "fictional coordinator",
+  "role": "coordinator",
+  "session_id": "fictional-coordinator-02",
+  "context_revision": "ctx-002",
+  "observed_at": "2026-09-27T10:05:00+08:00",
+  "last_action": "Recorded the omitted manual-cleanup constraint; no delivery evidence exists yet.",
+  "next_action": "Locate original execution and review its existing result before deciding how to reconcile the correction.",
+  "unresolved": ["Whether the original writer is still active is unknown.", "Extra JSON fields are not yet proven compatible."],
+  "operations": [{"description": "Original worker invocation", "locator": "session:fictional-worker-01", "state": "unknown"}],
+  "evidence": []
+}
